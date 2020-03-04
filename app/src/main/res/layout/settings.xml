@@ -3,4 +3,41 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <Switch
+        android:id="@+id/switch2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/isRandom"
+        android:textSize="18sp" />
+
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:text="@string/isLooping"
+            android:textColor="@android:color/black"
+            android:textSize="18sp" />
+
+        <RadioButton
+            android:id="@+id/loop0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/loop0" />
+
+        <RadioButton
+            android:id="@+id/loop1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/loop1" />
+
+        <RadioButton
+            android:id="@+id/loop2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/loop2" />
+    </RadioGroup>
 </LinearLayout>
