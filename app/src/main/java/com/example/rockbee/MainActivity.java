@@ -23,9 +23,11 @@ public class MainActivity extends FragmentActivity {
     public CatalogFragment cf = new CatalogFragment();
     public MusicFragment mf = new MusicFragment();
     public SettingFragment sf = new SettingFragment();
+    public PlaylistFragment pf = new PlaylistFragment();
     private int num = 1, isLooping = 0;
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 0;
+    private LookingForProgress progress = new LookingForProgress();
 
     public SharedPreferences sPref;
     @Override
@@ -55,6 +57,9 @@ public class MainActivity extends FragmentActivity {
         mf.setCatalogFragment(cf);
         cf.set(isRandom, isLooping);
         ft.commit();
+        progress.setMusicFragment(mf);
+        mf.setThread(progress);
+        progress.start();
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -80,6 +85,7 @@ public class MainActivity extends FragmentActivity {
                         num = 2;
                         ft = fm.beginTransaction();
                         ft.replace(R.id.fl, mf);
+                        mf.setIsRandom(isRandom);
                         ft.commit();
                         break;
                     case R.id.apply:
@@ -125,4 +131,5 @@ public class MainActivity extends FragmentActivity {
         isLooping = sf.getLoop();
         cf.set(isRandom, isLooping);
     }
+
 }

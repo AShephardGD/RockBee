@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
@@ -20,15 +21,16 @@ import java.util.TreeMap;
 
 public class CatalogFragment extends Fragment {
     private File root = new Environment().getExternalStorageDirectory(), parentDirectory = root;
-    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>();
+    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>(), randomPlaylist = new ArrayList<>();
     private ListView cg;
     private MediaPlayer mediaPlayer;
     private boolean isRandom = false;
     private int isLooping = 0;
+    private SeekBar seekBar;
     MusicFragment mf;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-       View view = inflater.inflate(R.layout.catalog_listview, container, false);
+       View view = inflater.inflate(R.layout.fragment_listview, container, false);
        cg = view.findViewById(R.id.catalog);
        if (root.isDirectory()) {
             openDirectory(parentDirectory, cg);
@@ -82,35 +84,56 @@ public class CatalogFragment extends Fragment {
                     openDirectory(files.get(position), lv);
                 }
                 else {
-                    playMusic(files.get(position), playlist.indexOf(files.get(position)), playlist);
+                    playMusic(files.get(position), false);
+                    mf.setPlaylist(playlist);
                 }
             }
         });
     }
 
-    public void playMusic(File file, final int position, final ArrayList<File> play) {
-        boolean newPlay = true;
-        final ArrayList<File> playNow = new ArrayList<>(play);
+    public void playMusic(final File file, final boolean NRP) {
         try {
+            final ArrayList<File> nowPlays = new ArrayList<>(playlist);
+            mf.setIsPlaying(file);
+            mf.setRandomPlaylist(randomPlaylist);
+            mf.setName(file);
             mediaPlayer.release();
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setDataSource(file.getPath());
             mediaPlayer.prepare();
             mediaPlayer.start();
+            seekBar = mf.getSeekBar();
             mf.setMediaPlayer(mediaPlayer);
+            if(seekBar != null){
+                seekBar.setProgress(0);
+                seekBar.setMax(mediaPlayer.getDuration());
+                mf.resetTime();
+            }
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
                     if (isRandom && (isLooping != 2)) {
+                        if(NRP){
+                            File newTrack = nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1)));
+                            if(randomPlaylist.contains(newTrack)) randomPlaylist.remove(newTrack);
+                            if(randomPlaylist.indexOf(file) < randomPlaylist.size()) randomPlaylist.add(randomPlaylist.indexOf(file), newTrack);
+                            else randomPlaylist.add(newTrack);
+                            playMusic(newTrack, true);
+                        }
+                        else {
+                            randomPlaylist.clear();
+                            randomPlaylist.add(file);
+                            File newTrack = nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1)));
+                            randomPlaylist.add(newTrack);
+                            playMusic(newTrack, true);
+                        }
 
-                        int newPosition = (int) Math.round(playlist.size() * Math.random());
-                        playMusic(playNow.get(newPosition), newPosition, playNow);
                     }
-                    else if ((isLooping == 1 || position + 1 != playlist.size()) && isLooping != 2) {
-                        playMusic(playNow.get((position + 1) % playNow.size()), (position + 1) % playNow.size(), playNow);
+                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2) {
+                       playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()), NRP);
                     }
-                    else {
-                        playMusic(playNow.get(position), position, playNow);
+                    else if(isLooping == 2) {
+                        playMusic(file, NRP);
                     }
                 }
             });
@@ -151,7 +174,10 @@ public class CatalogFragment extends Fragment {
                 })) {
                     directories.put(file.getName(), file);
                 }
-                for(File file: directories.values()) files.add(file);
+                for(File file: directories.values()) {
+                    files.add(file);
+                    if(file.isFile())playlist.add(file);
+                }
             } catch (NullPointerException e) {}
             CatalogAdapter adapter = new CatalogAdapter(getActivity(), files,"" + getResources().getText(R.string.cg));
             cg.setAdapter(adapter);
@@ -162,7 +188,10 @@ public class CatalogFragment extends Fragment {
                         parentDirectory = files.get(position);
                         openDirectory(files.get(position), cg);
                     }
-                    else playMusic(files.get(position), position, playlist);
+                    else {
+                        mf.setPlaylist(playlist);
+                        playMusic(files.get(position), false);
+                    }
                 }
             });
         }
@@ -175,4 +204,8 @@ public class CatalogFragment extends Fragment {
         isLooping = loop;
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
+
+    public void setRandomPlaylist(ArrayList<File> randomPlaylist) {
+        this.randomPlaylist = new ArrayList<>(randomPlaylist);
+    }
 }

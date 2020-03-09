@@ -10,4 +10,6 @@
     <string name="loop2">Повторять один трек</string>
     <string name="apply">Принять изменения</string>
     <string name="cg">Количество файлов</string>
+    <string name="emptyCatalog">Нет файлов или каталогов</string>
+    <string name="emptyPlaylist">Сейчас ничего не проигрывается</string>
 </resources>
