@@ -21,7 +21,7 @@ import java.util.TreeMap;
 
 public class CatalogFragment extends Fragment {
     private File root = new Environment().getExternalStorageDirectory(), parentDirectory = root;
-    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>(), randomPlaylist = new ArrayList<>();
+    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>();
     private ListView cg;
     private MediaPlayer mediaPlayer;
     private boolean isRandom = false;
@@ -84,18 +84,18 @@ public class CatalogFragment extends Fragment {
                     openDirectory(files.get(position), lv);
                 }
                 else {
-                    playMusic(files.get(position), false);
+                    playMusic(files.get(position));
                     mf.setPlaylist(playlist);
                 }
             }
         });
     }
 
-    public void playMusic(final File file, final boolean NRP) {
+    public void playMusic(final File file) {
         try {
+            if(mf.getPS() != null) mf.getPS().setImageResource(R.drawable.ic_media_pause);
             final ArrayList<File> nowPlays = new ArrayList<>(playlist);
             mf.setIsPlaying(file);
-            mf.setRandomPlaylist(randomPlaylist);
             mf.setName(file);
             mediaPlayer.release();
             mediaPlayer = new MediaPlayer();
@@ -112,29 +112,11 @@ public class CatalogFragment extends Fragment {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    if (isRandom && (isLooping != 2)) {
-                        if(NRP){
-                            File newTrack = nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1)));
-                            if(randomPlaylist.contains(newTrack)) randomPlaylist.remove(newTrack);
-                            if(randomPlaylist.indexOf(file) < randomPlaylist.size()) randomPlaylist.add(randomPlaylist.indexOf(file), newTrack);
-                            else randomPlaylist.add(newTrack);
-                            playMusic(newTrack, true);
-                        }
-                        else {
-                            randomPlaylist.clear();
-                            randomPlaylist.add(file);
-                            File newTrack = nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1)));
-                            randomPlaylist.add(newTrack);
-                            playMusic(newTrack, true);
-                        }
+                    if (isRandom && (isLooping != 2)) { playMusic(nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1))));
 
                     }
-                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2) {
-                       playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()), NRP);
-                    }
-                    else if(isLooping == 2) {
-                        playMusic(file, NRP);
-                    }
+                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2) playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()));
+                    else if(isLooping == 2) playMusic(file);
                 }
             });
         } catch (IOException e) {
@@ -190,7 +172,7 @@ public class CatalogFragment extends Fragment {
                     }
                     else {
                         mf.setPlaylist(playlist);
-                        playMusic(files.get(position), false);
+                        playMusic(files.get(position));
                     }
                 }
             });
@@ -205,7 +187,4 @@ public class CatalogFragment extends Fragment {
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
 
-    public void setRandomPlaylist(ArrayList<File> randomPlaylist) {
-        this.randomPlaylist = new ArrayList<>(randomPlaylist);
-    }
 }

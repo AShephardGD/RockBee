@@ -7,7 +7,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -19,15 +19,18 @@ public class MainActivity extends FragmentActivity {
     private MediaPlayer mediaPlayer;
     private FragmentManager fm;
     private FragmentTransaction ft;
-    private Button settings, catalog, music, apply;
-    public CatalogFragment cf = new CatalogFragment();
-    public MusicFragment mf = new MusicFragment();
-    public SettingFragment sf = new SettingFragment();
-    public PlaylistFragment pf = new PlaylistFragment();
+    private Button prev, next, apply;
+    public SettingFragment sf = new SettingFragment(); //0
+    public CatalogFragment cf = new CatalogFragment();//1
+    public MusicFragment mf = new MusicFragment();//2
+    public PlaylistFragment pf = new PlaylistFragment();//3
+    private ServerMusicFragment smf = new ServerMusicFragment();//4
     private int num = 1, isLooping = 0;
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 0;
     private LookingForProgress progress = new LookingForProgress();
+    private TextView nowItem;
+
 
     public SharedPreferences sPref;
     @Override
@@ -36,9 +39,9 @@ public class MainActivity extends FragmentActivity {
         setContentView(R.layout.main);
         load();
         mediaPlayer = new MediaPlayer();
-        settings = findViewById(R.id.settings);
-        catalog = findViewById(R.id.papki);
-        music = findViewById(R.id.music);
+        nowItem = findViewById(R.id.nameOfFrag);
+        prev = findViewById(R.id.previous);
+        next = findViewById(R.id.next);
         apply = findViewById(R.id.apply);
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -60,43 +63,128 @@ public class MainActivity extends FragmentActivity {
         progress.setMusicFragment(mf);
         mf.setThread(progress);
         progress.start();
+        nowItem.setText(getResources().getText(R.string.catalog));
+        prev.setText("<<" + getResources().getText(R.string.settings));
+        next.setText(getResources().getText(R.string.isPlaying) + ">>");
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 switch(v.getId()){
-                    case R.id.settings:
-                        sf.set(isRandom, isLooping);
-                        num = 0;
-                        ft = fm.beginTransaction();
-                        ft.replace(R.id.fl, sf);
-                        ft.commit();
-                        apply.setVisibility(View.VISIBLE);
+                    case R.id.previous:
+                        switch(num){
+                            case 0://ServerMusicFragment is opened, settings is closed;
+                                apply.setVisibility(View.GONE);
+                                num = 4;
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, smf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.Playlists));
+                                next.setText(getResources().getText(R.string.settings) + ">>");
+                                nowItem.setText(getResources().getText(R.string.Lobby));
+                                break;
+                            case 1://Settings is opened, catalog is closed;
+                                apply.setVisibility(View.VISIBLE);
+                                num = 0;
+                                sf.set(isRandom, isLooping);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, sf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.Lobby));
+                                next.setText(getResources().getText(R.string.catalog) + ">>");
+                                nowItem.setText(getResources().getText(R.string.settings));
+                                break;
+                            case 2://Catalog is opened, music is closed;
+                                num = 1;
+                                cf.set(isRandom, isLooping);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, cf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.settings));
+                                next.setText(getResources().getText(R.string.isPlaying) + ">>");
+                                nowItem.setText(getResources().getText(R.string.catalog));
+                                break;
+                            case 3://Music is opened, playlists is closed;
+                                num = 2;
+                                mf.setIsRandom(isRandom);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, mf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.catalog));
+                                next.setText(getResources().getText(R.string.Playlists) + ">>");
+                                nowItem.setText(getResources().getText(R.string.isPlaying));
+                                break;
+                            case 4://Playlists is opened, ServerMusic is closed;
+                                num = 3;
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, pf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.isPlaying));
+                                next.setText(getResources().getText(R.string.Lobby) + ">>");
+                                nowItem.setText(getResources().getText(R.string.Playlists));
+                                break;
+                        }
                         break;
-                    case R.id.papki:
-                        apply.setVisibility(View.GONE);
-                        cf.set(isRandom, isLooping);
-                        num = 1;
-                        ft = fm.beginTransaction();
-                        ft.replace(R.id.fl, cf);
-                        ft.commit();
-                        break;
-                    case R.id.music:
-                        apply.setVisibility(View.GONE);
-                        num = 2;
-                        ft = fm.beginTransaction();
-                        ft.replace(R.id.fl, mf);
-                        mf.setIsRandom(isRandom);
-                        ft.commit();
-                        break;
+                    case R.id.next:
+                        switch(num){
+                            case 0://Catalog is opened, settings is closed;
+                                apply.setVisibility(View.GONE);
+                                num = 1;
+                                cf.set(isRandom, isLooping);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, cf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.settings));
+                                next.setText(getResources().getText(R.string.isPlaying) + ">>");
+                                nowItem.setText(getResources().getText(R.string.catalog));
+                                break;
+                            case 1://Music is opened, catalog is closed;
+                                num = 2;
+                                mf.setIsRandom(isRandom);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, mf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.catalog));
+                                next.setText(getResources().getText(R.string.Playlists) + ">>");
+                                nowItem.setText(getResources().getText(R.string.isPlaying));
+                                break;
+                            case 2://Playlists is opened, Music is closed;
+                                num = 3;
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, pf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.isPlaying));
+                                next.setText(getResources().getText(R.string.Lobby) + ">>");
+                                nowItem.setText(getResources().getText(R.string.Playlists));
+                                break;
+                            case 3://ServerMusicFragment is opened, Playlists is closed;
+                                num = 4;
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, smf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.Playlists));
+                                next.setText(getResources().getText(R.string.settings) + ">>");
+                                nowItem.setText(getResources().getText(R.string.Lobby));
+                                break;
+                            case 4://Settings is opened, ServerMusic is closed;
+                                apply.setVisibility(View.VISIBLE);
+                                num = 0;
+                                sf.set(isRandom, isLooping);
+                                ft = fm.beginTransaction();
+                                ft.replace(R.id.fl, sf);
+                                ft.commit();
+                                prev.setText("<<" + getResources().getText(R.string.Lobby));
+                                next.setText(getResources().getText(R.string.catalog) + ">>");
+                                nowItem.setText(getResources().getText(R.string.settings));
+                                break;
+                        }
                     case R.id.apply:
                         applyChanges();
                         break;
                 }
             }
         };
-        settings.setOnClickListener(listener);
-        catalog.setOnClickListener(listener);
-        music.setOnClickListener(listener);
+        prev.setOnClickListener(listener);
+        next.setOnClickListener(listener);
         apply.setOnClickListener(listener);
     }
     public void onBackPressed(){

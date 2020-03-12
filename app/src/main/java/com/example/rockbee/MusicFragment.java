@@ -20,7 +20,7 @@ import java.util.ArrayList;
 public class MusicFragment extends Fragment {
     private MediaPlayer mediaPlayer;
     private ImageView prev, next, ps, back, forward;
-    private ArrayList<File> playlist = new ArrayList<>(), randomPlaylist;
+    private ArrayList<File> playlist = new ArrayList<>();
     private ListView nowPlays;
     private SeekBar seekBar = null;
     private CatalogFragment cf;
@@ -57,7 +57,7 @@ public class MusicFragment extends Fragment {
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                cf.playMusic(playlist.get(position), true);
+                cf.playMusic(playlist.get(position));
                 resetTime();
             }
         });
@@ -69,33 +69,24 @@ public class MusicFragment extends Fragment {
                     case R.id.prev:
                         ps.setImageResource(R.drawable.ic_media_pause);
                         int index;
-                        if(isRandom) {
-                            index = (randomPlaylist.lastIndexOf(isPlaying) - 1);
-                            if (index < 0) index = randomPlaylist.size() - 1;
-                            cf.playMusic(randomPlaylist.get(index), true);
-                        }
+                        if(isRandom) cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))));
                         else {
                             index = (playlist.indexOf(isPlaying) - 1);
                             if(index < 0) index = playlist.size() - 1;
-                            cf.playMusic(playlist.get(index), true);
+                            cf.playMusic(playlist.get(index));
                         }
                         break;
                     case R.id.next:
                         ps.setImageResource(R.drawable.ic_media_pause);
-                        if(isRandom){
-                            File newTrack = playlist.get((int) Math.round(Math.random() * (playlist.size() - 1)));
-                            if(randomPlaylist.contains(newTrack)) randomPlaylist.remove(newTrack);
-                            randomPlaylist.add(newTrack);
-                            cf.setRandomPlaylist(randomPlaylist);
-                            cf.playMusic(newTrack, true);
-                        } else cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), true);
+                        if(isRandom)cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))));
+                        else cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()));
                         break;
                     case R.id.ps:
                         if (mediaPlayer.isPlaying()) {
                             ps.setImageResource(R.drawable.ic_media_play);
                             mediaPlayer.pause();
                         }
-                        else {
+                        else if(isPlaying != null) {
                             ps.setImageResource(R.drawable.ic_media_pause);
                             mediaPlayer.start();
                         }
@@ -163,9 +154,9 @@ public class MusicFragment extends Fragment {
     }
     public void setThread(LookingForProgress thread) {progress = thread;}
     public void setIsRandom(boolean random) {isRandom = random;}
-    public void setRandomPlaylist(ArrayList<File> play) {randomPlaylist = new ArrayList<>(play);}
     public void setIsPlaying(File play) {isPlaying = play;}
     public void setName(File file){
         if(name != null) name.setText(file.getName());
     }
+    public ImageView getPS(){return ps;}
 }

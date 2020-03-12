@@ -3,6 +3,8 @@
     <string name="settings">Настройки</string>
     <string name="catalog">Каталог</string>
     <string name="isPlaying">Аудио</string>
+    <string name="Playlists">Плейлисты</string>
+    <string name="Lobby">Онлайн</string>
     <string name="isLooping">Режим повторения по умолчанию:</string>
     <string name="isRandom">Случайный порядок по умолчанию</string>
     <string name="loop0">Без повторений</string>
