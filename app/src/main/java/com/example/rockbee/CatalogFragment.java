@@ -1,5 +1,7 @@
 package com.example.rockbee;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
@@ -27,7 +29,8 @@ public class CatalogFragment extends Fragment {
     private boolean isRandom = false;
     private int isLooping = 0;
     private SeekBar seekBar;
-    MusicFragment mf;
+    private MusicFragment mf;
+    private PlaylistFragment pf;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_listview, container, false);
@@ -84,17 +87,34 @@ public class CatalogFragment extends Fragment {
                     openDirectory(files.get(position), lv);
                 }
                 else {
-                    playMusic(files.get(position));
+                    playMusic(files.get(position), playlist);
                     mf.setPlaylist(playlist);
                 }
             }
         });
+        lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                if(files.get(position).isFile()){
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                    builder.setTitle(getResources().getText(R.string.choosePlaylist))
+                            .setItems(pf.getNames().toArray(new String[pf.getNames().size()]), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
+                                }
+                            });
+                    builder.create().show();
+                }
+                return true;
+            }
+        });
     }
 
-    public void playMusic(final File file) {
+    public void playMusic(final File file, ArrayList<File> newPlaylist) {
         try {
             if(mf.getPS() != null) mf.getPS().setImageResource(R.drawable.ic_media_pause);
-            final ArrayList<File> nowPlays = new ArrayList<>(playlist);
+            final ArrayList<File> nowPlays = new ArrayList<>(newPlaylist);
             mf.setIsPlaying(file);
             mf.setName(file);
             mediaPlayer.release();
@@ -112,11 +132,11 @@ public class CatalogFragment extends Fragment {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    if (isRandom && (isLooping != 2)) { playMusic(nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1))));
-
-                    }
-                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2) playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()));
-                    else if(isLooping == 2) playMusic(file);
+                    seekBar.setProgress(0);
+                    if (isRandom && (isLooping != 2)) playMusic(nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1))), nowPlays);
+                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2)
+                        playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()), nowPlays);
+                    else if(isLooping == 2) playMusic(file, nowPlays);
                 }
             });
         } catch (IOException e) {
@@ -172,7 +192,7 @@ public class CatalogFragment extends Fragment {
                     }
                     else {
                         mf.setPlaylist(playlist);
-                        playMusic(files.get(position));
+                        playMusic(files.get(position), playlist);
                     }
                 }
             });
@@ -186,5 +206,5 @@ public class CatalogFragment extends Fragment {
         isLooping = loop;
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
-
+    public void setPlaylistFragment(PlaylistFragment fragment) {pf = fragment;}
 }

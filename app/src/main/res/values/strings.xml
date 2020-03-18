@@ -14,4 +14,12 @@
     <string name="cg">Количество файлов</string>
     <string name="emptyCatalog">Нет файлов или каталогов</string>
     <string name="emptyPlaylist">Сейчас ничего не проигрывается</string>
+    <string name="playAll">Проигрывать все треки</string>
+    <string name="newPlaylist">Создать новый плейлист</string>
+    <string name="newPlaylistHint">Введите название плейлиста</string>
+    <string name="add">Добавить</string>
+    <string name="cancel">Отмена</string>
+    <string name="playlistAlreadyExists">Плейлист с таким именем уже существует</string>
+    <string name="choosePlaylist">Выберите плейлист</string>
+    <string name="noNamePlaylist">Плейлисту не задано название</string>
 </resources>

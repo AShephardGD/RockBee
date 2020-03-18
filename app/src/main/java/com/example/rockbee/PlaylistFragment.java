@@ -4,13 +4,161 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
+
 public class PlaylistFragment extends Fragment {
+    private ListView listView;
+    private TreeMap<String, ArrayList<File>> playlists = new TreeMap<>();
+    private ArrayList<String> names;
+    private ArrayList<Integer> sizeOfPlaylist;
+    private ArrayList<File> tmpPlaylist;
+    private CatalogFragment cf;
+    private int num = 0;
+    private MusicFragment mf;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         View view = inflater.inflate(R.layout.fragment_listview, container, false);
+        listView = view.findViewById(R.id.catalog);
+        names = new ArrayList<>();
+        sizeOfPlaylist = new ArrayList<>();
+        for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+            names.add(entry.getKey());
+            sizeOfPlaylist.add(entry.getValue().size());
+        }
+        PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
+                tmpPlaylist = new ArrayList<>(playlists.get(names.get(position)));
+                num = 1;
+                CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                listView.setAdapter(adapter);
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        cf.playMusic(tmpPlaylist.get(position), tmpPlaylist);
+                        mf.setPlaylist(tmpPlaylist);
+                    }
+                });
+                listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+                    @Override
+                    public boolean onItemLongClick(AdapterView<?> parent, View view, int position1, long id) {
+                        tmpPlaylist.remove(position1);
+                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                        listView.setAdapter(adapter);
+                        playlists.put(names.get(position), tmpPlaylist);
+                        return true;
+                    }
+                });
+            }
+        });
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                playlists.remove(names.get(position));
+                names = new ArrayList<>();
+                sizeOfPlaylist = new ArrayList<>();
+                for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+                    names.add(entry.getKey());
+                    sizeOfPlaylist.add(entry.getValue().size());
+                }
+                PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                listView.setAdapter(adapter);
+                return true;
+            }
+        });
         return view;
     }
+    public void createNewPlaylist(String s){
+        if(!playlists.containsKey(s) && !s.equals("")) {
+            playlists.put(s, new ArrayList<File>());
+            names = new ArrayList<>();
+            sizeOfPlaylist = new ArrayList<>();
+            for (Map.Entry<String, ArrayList<File>> entry : playlists.entrySet()) {
+                names.add(entry.getKey());
+                sizeOfPlaylist.add(entry.getValue().size());
+            }
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            listView.setAdapter(adapter);
+        } else if(s.equals("")) Toast.makeText(getActivity(), "" + getResources().getText(R.string.noNamePlaylist), Toast.LENGTH_SHORT).show();
+        else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
+    }
+    public void setCatalogFragment(CatalogFragment fragment) {cf = fragment;}
+    public void onBackPressed(){
+        if(num == 1){
+            ((MainActivity) getActivity()).gotApply().setVisibility(View.VISIBLE);
+            num = 0;
+            names = new ArrayList<>();
+            sizeOfPlaylist = new ArrayList<>();
+            for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+                names.add(entry.getKey());
+                sizeOfPlaylist.add(entry.getValue().size());
+            }
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            listView.setAdapter(adapter);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, final int position1, long id) {
+                    ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
+                    tmpPlaylist = new ArrayList<>(playlists.get(names.get(position1)));
+                    num = 1;
+                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                    listView.setAdapter(adapter);
+                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            cf.playMusic(tmpPlaylist.get(position), tmpPlaylist);
+                            mf.setPlaylist(tmpPlaylist);
+                        }
+                    });
+                    listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+                        @Override
+                        public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                            tmpPlaylist.remove(position1);
+                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                            listView.setAdapter(adapter);
+                            playlists.put(names.get(position), tmpPlaylist);
+                            return true;
+                        }
+                    });
+                }
+            });
+            listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+                @Override
+                public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                    playlists.remove(names.get(position));
+                    names = new ArrayList<>();
+                    sizeOfPlaylist = new ArrayList<>();
+                    for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+                        names.add(entry.getKey());
+                        sizeOfPlaylist.add(entry.getValue().size());
+                    }
+                    PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                    listView.setAdapter(adapter);
+                    return true;
+                }
+            });
+        }
+        else getActivity().finish();
+    }
+    public void addNewSongToPlaylist(File file, String s){
+        ArrayList<File> temp = playlists.get(s);
+        temp.add(file);
+        playlists.put(s, temp);
+    }
+    public ArrayList<String> getNames(){return names;}
+    public void setMusicFragment(MusicFragment fragment){mf = fragment;}
+    public TreeMap<String, ArrayList<File>> getPlaylists() {return playlists; }
+    public void setPlaylists(TreeMap<String, ArrayList<File>> playlists) {this.playlists = playlists; }
 }

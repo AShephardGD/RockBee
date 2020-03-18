@@ -10,7 +10,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
@@ -57,7 +56,7 @@ public class MusicFragment extends Fragment {
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                cf.playMusic(playlist.get(position));
+                cf.playMusic(playlist.get(position), playlist);
                 resetTime();
             }
         });
@@ -65,45 +64,49 @@ public class MusicFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 int delta;
-                switch(v.getId()){
-                    case R.id.prev:
-                        ps.setImageResource(R.drawable.ic_media_pause);
-                        int index;
-                        if(isRandom) cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))));
-                        else {
-                            index = (playlist.indexOf(isPlaying) - 1);
-                            if(index < 0) index = playlist.size() - 1;
-                            cf.playMusic(playlist.get(index));
-                        }
-                        break;
-                    case R.id.next:
-                        ps.setImageResource(R.drawable.ic_media_pause);
-                        if(isRandom)cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))));
-                        else cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()));
-                        break;
-                    case R.id.ps:
-                        if (mediaPlayer.isPlaying()) {
-                            ps.setImageResource(R.drawable.ic_media_play);
-                            mediaPlayer.pause();
-                        }
-                        else if(isPlaying != null) {
-                            ps.setImageResource(R.drawable.ic_media_pause);
-                            mediaPlayer.start();
-                        }
-                        break;
-                    case R.id.back:
-                        delta = mediaPlayer.getCurrentPosition() - 10000;
-                        if (delta > 0) mediaPlayer.seekTo(delta);
-                        else mediaPlayer.seekTo(0);
-                        break;
-                    case R.id.forward:
-                        delta = mediaPlayer.getCurrentPosition() + 10000;
-                        if(delta < mediaPlayer.getDuration())mediaPlayer.seekTo(delta);
-                        else mediaPlayer.seekTo(mediaPlayer.getDuration() - 1);
-                        break;
-                    default:
-                        break;
-                }
+                 if(isPlaying != null) {
+                     switch (v.getId()) {
+                         case R.id.prev:
+                             ps.setImageResource(R.drawable.ic_media_pause);
+                             int index;
+                             if (isRandom)
+                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                             else {
+                                 index = (playlist.indexOf(isPlaying) - 1);
+                                 if (index < 0) index = playlist.size() - 1;
+                                 cf.playMusic(playlist.get(index), playlist);
+                             }
+                             break;
+                         case R.id.next:
+                             ps.setImageResource(R.drawable.ic_media_pause);
+                             if (isRandom)
+                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                             else
+                                 cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist);
+                             break;
+                         case R.id.ps:
+                             if (mediaPlayer.isPlaying()) {
+                                 ps.setImageResource(R.drawable.ic_media_play);
+                                 mediaPlayer.pause();
+                             } else {
+                                 ps.setImageResource(R.drawable.ic_media_pause);
+                                 mediaPlayer.start();
+                             }
+                             break;
+                         case R.id.back:
+                             delta = mediaPlayer.getCurrentPosition() - 10000;
+                             if (delta > 0) mediaPlayer.seekTo(delta);
+                             else mediaPlayer.seekTo(0);
+                             break;
+                         case R.id.forward:
+                             delta = mediaPlayer.getCurrentPosition() + 10000;
+                             if (delta < mediaPlayer.getDuration()) mediaPlayer.seekTo(delta);
+                             else mediaPlayer.seekTo(mediaPlayer.getDuration() - 1);
+                             break;
+                         default:
+                             break;
+                     }
+                 }
             }
         };
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -135,7 +138,9 @@ public class MusicFragment extends Fragment {
         mediaPlayer = mp;
     }
     public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
-    public void setPlaylist(ArrayList<File> play) {playlist = new ArrayList<>(play);}
+    public void setPlaylist(ArrayList<File> play) {
+        playlist = new ArrayList<>(play);
+    }
     public SeekBar getSeekBar(){return seekBar;}
     public void resetTime(){
         sec = (mediaPlayer.getDuration() / 1000) % 60;
@@ -159,4 +164,9 @@ public class MusicFragment extends Fragment {
         if(name != null) name.setText(file.getName());
     }
     public ImageView getPS(){return ps;}
+    public void setPlaylistFromActivity(ArrayList<File> play) {
+        playlist = new ArrayList<>(play);
+        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
+        if(nowPlays != null)nowPlays.setAdapter(adapter);
+    }
 }
