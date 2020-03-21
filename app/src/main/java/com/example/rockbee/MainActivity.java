@@ -251,7 +251,7 @@ public class MainActivity extends FragmentActivity {
     }
     public void load() {
         sPref = getPreferences(MODE_PRIVATE);
-        int i =sPref.getInt("i", 0), j = sPref.getInt();
+        int i =sPref.getInt("i", 0);
         isRandom = sPref.getBoolean("IsRandom", false);
         isLooping = sPref.getInt("IsLooping", 0);
     }
