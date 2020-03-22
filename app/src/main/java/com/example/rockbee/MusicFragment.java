@@ -1,5 +1,7 @@
 package com.example.rockbee;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -58,6 +60,27 @@ public class MusicFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 cf.playMusic(playlist.get(position), playlist);
                 resetTime();
+            }
+        });
+        nowPlays.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteFromNowPlays))
+                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        }).setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if(isPlaying.equals(playlist.get(position))) next.performClick();
+                        playlist.remove(position);
+                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
+                        nowPlays.setAdapter(adapter);
+                    }
+                }).create().show();
+                return true;
             }
         });
         View.OnClickListener listener = new View.OnClickListener() {
@@ -169,4 +192,6 @@ public class MusicFragment extends Fragment {
         CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
         if(nowPlays != null)nowPlays.setAdapter(adapter);
     }
+    public void addNewSongToNowPlays(File file){ playlist.add(file); }
+    public ArrayList<File> getPlaylist(){return playlist;}
 }

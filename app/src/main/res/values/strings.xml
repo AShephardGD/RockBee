@@ -22,4 +22,11 @@
     <string name="playlistAlreadyExists">Плейлист с таким именем уже существует</string>
     <string name="choosePlaylist">Выберите плейлист</string>
     <string name="noNamePlaylist">Плейлисту не задано название</string>
+    <string name="chooseAction">Выберите действие</string>
+    <string name="deleteQ">Удалить?</string>
+    <string name="delete">Удалить</string>
+    <string name="addToPlaylist">Добавить в плейлист</string>
+    <string name="deleteFromNowPlays">Удалить из текущего плейлиста?</string>
+    <string name="addToNowPlays">Добавить в текущий плейлист</string>
+    <string name="addNowPlays">Сохранить текущий плейлист</string>
 </resources>

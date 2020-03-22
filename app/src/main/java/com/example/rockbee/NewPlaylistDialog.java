@@ -20,15 +20,22 @@ public class NewPlaylistDialog extends DialogFragment {
         LayoutInflater inflater = getActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.playlists_alert_dialog, null);
         ed = view.findViewById(R.id.newPlaylistName);
-        builder.setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+        builder.setNegativeButton(getResources().getText(R.string.addNowPlays), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                ((MainActivity)getActivity()).playlistFromNowPlays(ed.getText().toString());
             }
         });
         builder.setPositiveButton(getResources().getText(R.string.add), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 ((MainActivity)getActivity()).setNewPlaylistName(ed.getText().toString());
+            }
+        });
+        builder.setNeutralButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
             }
         });
         builder.setTitle(getResources().getText(R.string.newPlaylist));

@@ -1,5 +1,7 @@
 package com.example.rockbee;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,11 +55,23 @@ public class PlaylistFragment extends Fragment {
                 });
                 listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                     @Override
-                    public boolean onItemLongClick(AdapterView<?> parent, View view, int position1, long id) {
-                        tmpPlaylist.remove(position1);
-                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
-                        listView.setAdapter(adapter);
-                        playlists.put(names.get(position), tmpPlaylist);
+                    public boolean onItemLongClick(AdapterView<?> parent, View view, final int position1, long id) {
+                        new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                                .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        tmpPlaylist.remove(position1);
+                                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                                        listView.setAdapter(adapter);
+                                        playlists.put(names.get(position), tmpPlaylist);
+                                    }
+                                })
+                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        }).create().show();
                         return true;
                     }
                 });
@@ -65,16 +79,29 @@ public class PlaylistFragment extends Fragment {
         });
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                playlists.remove(names.get(position));
-                names = new ArrayList<>();
-                sizeOfPlaylist = new ArrayList<>();
-                for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
-                    names.add(entry.getKey());
-                    sizeOfPlaylist.add(entry.getValue().size());
-                }
-                PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
-                listView.setAdapter(adapter);
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                        .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                playlists.remove(names.get(position));
+                                names = new ArrayList<>();
+                                sizeOfPlaylist = new ArrayList<>();
+                                for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+                                    names.add(entry.getKey());
+                                    sizeOfPlaylist.add(entry.getValue().size());
+                                }
+                                PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                                listView.setAdapter(adapter);
+                            }
+                        })
+                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        }).create().show();
+
                 return true;
             }
         });
@@ -124,11 +151,23 @@ public class PlaylistFragment extends Fragment {
                     });
                     listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                         @Override
-                        public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                            tmpPlaylist.remove(position1);
-                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
-                            listView.setAdapter(adapter);
-                            playlists.put(names.get(position), tmpPlaylist);
+                        public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                            new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                                    .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            tmpPlaylist.remove(position1);
+                                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                                            listView.setAdapter(adapter);
+                                            playlists.put(names.get(position), tmpPlaylist);
+                                        }
+                                    })
+                                    .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+
+                                        }
+                                    }).create().show();
                             return true;
                         }
                     });
@@ -136,16 +175,28 @@ public class PlaylistFragment extends Fragment {
             });
             listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                 @Override
-                public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                    playlists.remove(names.get(position));
-                    names = new ArrayList<>();
-                    sizeOfPlaylist = new ArrayList<>();
-                    for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
-                        names.add(entry.getKey());
-                        sizeOfPlaylist.add(entry.getValue().size());
-                    }
-                    PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
-                    listView.setAdapter(adapter);
+                public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                    new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                            .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    playlists.remove(names.get(position));
+                                    names = new ArrayList<>();
+                                    sizeOfPlaylist = new ArrayList<>();
+                                    for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+                                        names.add(entry.getKey());
+                                        sizeOfPlaylist.add(entry.getValue().size());
+                                    }
+                                    PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                                    listView.setAdapter(adapter);
+                                }
+                            })
+                            .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                }
+                            }).create().show();
                     return true;
                 }
             });
@@ -157,8 +208,28 @@ public class PlaylistFragment extends Fragment {
         temp.add(file);
         playlists.put(s, temp);
     }
-    public ArrayList<String> getNames(){return names;}
+    public ArrayList<String> getNames(){
+        names = new ArrayList<>();
+        for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
+            names.add(entry.getKey());
+        }
+        return names;
+    }
     public void setMusicFragment(MusicFragment fragment){mf = fragment;}
     public TreeMap<String, ArrayList<File>> getPlaylists() {return playlists; }
     public void setPlaylists(TreeMap<String, ArrayList<File>> playlists) {this.playlists = playlists; }
+    public void newPlaylistfromNowPlays(ArrayList<File> np, String s){
+        if(!playlists.containsKey(s) && !s.equals("")) {
+            playlists.put(s, new ArrayList<>(np));
+            names = new ArrayList<>();
+            sizeOfPlaylist = new ArrayList<>();
+            for (Map.Entry<String, ArrayList<File>> entry : playlists.entrySet()) {
+                names.add(entry.getKey());
+                sizeOfPlaylist.add(entry.getValue().size());
+            }
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            listView.setAdapter(adapter);
+        } else if(s.equals("")) Toast.makeText(getActivity(), "" + getResources().getText(R.string.noNamePlaylist), Toast.LENGTH_SHORT).show();
+        else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
+    }
 }

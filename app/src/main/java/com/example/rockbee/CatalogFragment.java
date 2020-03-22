@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 public class CatalogFragment extends Fragment {
-    private File root = new Environment().getExternalStorageDirectory(), parentDirectory = root;
+    private File root = new Environment().getExternalStorageDirectory(), parentDirectory = root, catalogForTemporaryMusic = new File(root.getAbsolutePath() + "/Temporary Music From RockBee");
     private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>();
     private ListView cg;
     private MediaPlayer mediaPlayer;
@@ -35,6 +35,7 @@ public class CatalogFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_listview, container, false);
        cg = view.findViewById(R.id.catalog);
+       if(!catalogForTemporaryMusic.exists()) catalogForTemporaryMusic.mkdir();
        if (root.isDirectory()) {
             openDirectory(parentDirectory, cg);
        }
@@ -96,16 +97,51 @@ public class CatalogFragment extends Fragment {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
                 if(files.get(position).isFile()){
-                    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                    builder.setTitle(getResources().getText(R.string.choosePlaylist))
-                            .setItems(pf.getNames().toArray(new String[pf.getNames().size()]), new DialogInterface.OnClickListener() {
+                    new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.chooseAction))
+                            .setItems(new String[]{getResources().getText(R.string.addToPlaylist) + "", getResources().getText(R.string.addToNowPlays) + "", getResources().getText(R.string.delete) + ""}, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
+                                    if (which == 0) new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.choosePlaylist))
+                                            .setItems(pf.getNames().toArray(new String[pf.getNames().size()]), new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
+                                                }
+                                            }).create().show();
+                                    else if(which == 2) new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                                    .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            files.get(position).delete();
+                                            files.remove(position);
+                                            openDirectory(parentDirectory, cg);
+                                        }
+                                    })
+                                    .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+
+                                        }
+                                    }).create().show();
+                                    else mf.addNewSongToNowPlays(files.get(position));
                                 }
-                            });
-                    builder.create().show();
+                            }).create().show();
                 }
+                else new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        files.get(position).delete();
+                        files.remove(position);
+                        openDirectory(parentDirectory, cg);
+                    }
+                })
+                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        }).create().show();
                 return true;
             }
         });

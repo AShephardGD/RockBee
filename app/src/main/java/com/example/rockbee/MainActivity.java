@@ -22,6 +22,21 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
+/*
+Список Ошибок:
+1)MainActivity(52-59): Проверяет выданные разрешения. Если в первый раз выдать разрешения, код не успеет учесть изменения и все равно пойдет так, как будто разрешение не было выдано.
+Так же следует проработать тот вариант, когда пользователь отказался давать разрешения.
+2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
+3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
+4)MainActivity кнопка apply: при появлении в активности смещает listView больше, чем требуется для кнопки. Выглядит неказисто.
+Доделать:
+1)Серверную часть(обязательно)
+2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
+3)Изменения гаммы(необязательно)
+4)Меню свайпов(необязательно)
+5)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
+ */
+
 public class MainActivity extends FragmentActivity {
     private MediaPlayer mediaPlayer;
     private FragmentManager fm;
@@ -44,22 +59,21 @@ public class MainActivity extends FragmentActivity {
     public SharedPreferences sPref;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
+            // Из-за этого в первый раз на экране пусто???
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        load();
         mediaPlayer = new MediaPlayer();
         nowItem = findViewById(R.id.nameOfFrag);
         prev = findViewById(R.id.previous);
         next = findViewById(R.id.next);
         apply = findViewById(R.id.apply); // При появлении в активности смещает все наверх
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(MainActivity.this,
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
-                                                                // Из-за этого в первый раз на экране пусто???
-        }
         fm = getSupportFragmentManager();
         ft = fm.beginTransaction();
         ft.add(R.id.fl, cf);
@@ -69,6 +83,7 @@ public class MainActivity extends FragmentActivity {
         cf.setPlaylistFragment(pf);
         cf.setMusicFragment(mf);
         cf.setMediaPlayer(mediaPlayer);
+        load();
         cf.set(isRandom, isLooping);
         ft.commit();
         progress.setMusicFragment(mf);
@@ -238,20 +253,34 @@ public class MainActivity extends FragmentActivity {
         playlists = new TreeMap<>(pf.getPlaylists());
         for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
             for(File file: entry.getValue()){
-                ed.putString(Integer.toString(i) + Integer.toString(j), entry.getKey() + " " + file.getAbsolutePath());
+                ed.putString(i + Integer.toString(j), file.getAbsolutePath());
                 j++;
             }
+            ed.putString(i + "name", entry.getKey());
+            ed.putInt(Integer.toString(i), j);
             j = 0;
             i++;
         }
-        ed.putInt("i", i);
+        ed.putInt("numbersOfPlaylists", i);
         ed.putBoolean("IsRandom", isRandom);
         ed.putInt("IsLooping", isLooping);
         ed.commit();
     }
     public void load() {
+        String name;
+        int len;
+        ArrayList<File> songs;
+        playlists = new TreeMap<>();
         sPref = getPreferences(MODE_PRIVATE);
-        int i =sPref.getInt("i", 0);
+        int i = sPref.getInt("numbersOfPlaylists", 0);
+        for(int it = 0; it < i; it++){
+            name = sPref.getString(it + "name", "");
+            len = sPref.getInt(Integer.toString(it), 0);
+            songs = new ArrayList<>();
+            for(int j = 0; j < len; j++)songs.add(new File(sPref.getString(it + Integer.toString(j), "")));
+            playlists.put(name, songs);
+        }
+        pf.setPlaylists(playlists);
         isRandom = sPref.getBoolean("IsRandom", false);
         isLooping = sPref.getInt("IsLooping", 0);
     }
@@ -285,6 +314,8 @@ public class MainActivity extends FragmentActivity {
     public void setNewPlaylistName(String s){
         pf.createNewPlaylist(s);
     }
-    public void addNewSongToPlaylist(File file, String s){pf.addNewSongToPlaylist(file, s);}
     public Button gotApply(){return apply;}
+    public void playlistFromNowPlays(String s){
+        pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
+    }
 }
