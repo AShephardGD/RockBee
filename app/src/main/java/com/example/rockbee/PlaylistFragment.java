@@ -10,7 +10,11 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -26,22 +30,24 @@ public class PlaylistFragment extends Fragment {
     private CatalogFragment cf;
     private int num = 0, color;
     private MusicFragment mf;
+    private FloatingActionButton fab;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
-        View view = inflater.inflate(R.layout.fragment_listview, container, false);
-        listView = view.findViewById(R.id.catalog);
+        View view = inflater.inflate(R.layout.playlists, container, false);
+        listView = view.findViewById(R.id.playlists);
         names = new ArrayList<>();
         sizeOfPlaylist = new ArrayList<>();
         for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
             names.add(entry.getKey());
             sizeOfPlaylist.add(entry.getValue().size());
         }
+        fab = view.findViewById(R.id.fab);
         PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
+                fab.hide();
                 tmpPlaylist = new ArrayList<>(playlists.get(names.get(position)));
                 num = 1;
                 CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
@@ -105,6 +111,12 @@ public class PlaylistFragment extends Fragment {
                 return true;
             }
         });
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((MainActivity)getActivity()).newPlaylist();
+            }
+        });
         return view;
     }
     public void createNewPlaylist(String s){
@@ -124,8 +136,8 @@ public class PlaylistFragment extends Fragment {
     public void setCatalogFragment(CatalogFragment fragment) {cf = fragment;}
     public void onBackPressed(){
         if(num == 1){
-            ((MainActivity) getActivity()).gotApply().setVisibility(View.VISIBLE);
             num = 0;
+            fab.show();
             names = new ArrayList<>();
             sizeOfPlaylist = new ArrayList<>();
             for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
@@ -137,7 +149,7 @@ public class PlaylistFragment extends Fragment {
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, final int position1, long id) {
-                    ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
+                    fab.hide();
                     tmpPlaylist = new ArrayList<>(playlists.get(names.get(position1)));
                     num = 1;
                     CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);

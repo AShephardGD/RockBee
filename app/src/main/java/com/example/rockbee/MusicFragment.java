@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,8 +16,12 @@ import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.TreeMap;
 
 public class MusicFragment extends Fragment {
     private MediaPlayer mediaPlayer;
@@ -30,6 +35,9 @@ public class MusicFragment extends Fragment {
     private boolean isRandom;
     private LookingForProgress progress;
     private File isPlaying = null;
+    private FloatingActionButton fab;
+    private TreeMap<String, File> music;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.music, container, false);
@@ -37,6 +45,7 @@ public class MusicFragment extends Fragment {
         prev = view.findViewById(R.id.prev);
         next = view.findViewById(R.id.next);
         ps = view.findViewById(R.id.ps);
+        fab = view.findViewById(R.id.fab3);
         back = view.findViewById(R.id.back);
         forward = view.findViewById(R.id.forward);
         seekBar = view.findViewById(R.id.seekBar);
@@ -64,6 +73,18 @@ public class MusicFragment extends Fragment {
                 resetTime();
             }
         });
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                music = new TreeMap<>();
+                playlist = new ArrayList<>();
+                playAllMusic(new Environment().getExternalStorageDirectory());
+                for (File f: music.values())playlist.add(f);
+                cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                nowPlays.setAdapter(adapter);
+            }
+        });
         nowPlays.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
@@ -89,7 +110,7 @@ public class MusicFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 int delta;
-                 if(isPlaying != null) {
+                if(isPlaying != null) {
                      switch (v.getId()) {
                          case R.id.prev:
                              ps.setImageResource(R.drawable.ic_media_pause);
@@ -189,12 +210,24 @@ public class MusicFragment extends Fragment {
         if(name != null) name.setText(file.getName());
     }
     public ImageView getPS(){return ps;}
-    public void setPlaylistFromActivity(ArrayList<File> play) {
-        playlist = new ArrayList<>(play);
-        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-        if(nowPlays != null)nowPlays.setAdapter(adapter);
-    }
     public void addNewSongToNowPlays(File file){ playlist.add(file); }
     public ArrayList<File> getPlaylist(){return playlist;}
     public void changeColor(int text) {color = text;}
+    public void playAllMusic(File file){
+        for(File f: file.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File pathname, String s) {
+                return new File(pathname.getAbsolutePath() + "/" + s).isDirectory() ||
+                        s.contains(".mp3") ||
+                        s.contains(".ac3") ||
+                        s.contains(".flac") ||
+                        s.contains(".ogg") ||
+                        s.contains(".wav") ||
+                        s.contains(".wma");
+            }
+        })){
+            if(f.isDirectory()) playAllMusic(f);
+            else music.put(f.getName(), f);
+        }
+    }
 }

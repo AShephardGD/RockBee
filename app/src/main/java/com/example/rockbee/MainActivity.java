@@ -29,7 +29,6 @@ import java.util.TreeMap;
 Так же следует проработать тот вариант, когда пользователь отказался давать разрешения.
 2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
 3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
-4)MainActivity кнопка apply: при появлении в активности смещает listView больше, чем требуется для кнопки. Выглядит неказисто.
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
@@ -42,7 +41,7 @@ public class MainActivity extends FragmentActivity {
     private MediaPlayer mediaPlayer;
     private FragmentManager fm;
     private FragmentTransaction ft;
-    private Button prev, next, apply;
+    private Button prev, next;
     private SettingFragment sf = new SettingFragment(); //0
     private CatalogFragment cf = new CatalogFragment();//1
     private MusicFragment mf = new MusicFragment();//2
@@ -53,8 +52,6 @@ public class MainActivity extends FragmentActivity {
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
     private TextView nowItem;
-    private ArrayList<File> playlist;
-    private TreeMap<String, File> music;
     private TreeMap<String, ArrayList<File>> playlists;
     private ConstraintLayout constraintLayout;
     private SharedPreferences sPref;
@@ -76,7 +73,6 @@ public class MainActivity extends FragmentActivity {
         nowItem = findViewById(R.id.nameOfFrag);
         prev = findViewById(R.id.previous);
         next = findViewById(R.id.next);
-        apply = findViewById(R.id.apply); // При появлении в активности смещает все наверх
         fm = getSupportFragmentManager();
         ft = fm.beginTransaction();
         ft.add(R.id.fl, cf);
@@ -104,7 +100,6 @@ public class MainActivity extends FragmentActivity {
                     case R.id.previous:
                         switch(num){
                             case 0://ServerMusicFragment is opened, settings is closed;
-                                apply.setVisibility(View.GONE);
                                 num = 4;
                                 ft = fm.beginTransaction();
                                 ft.replace(R.id.fl, smf);
@@ -114,8 +109,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.Lobby));
                                 break;
                             case 1://Settings is opened, catalog is closed;
-                                apply.setText(getResources().getText(R.string.apply));
-                                apply.setVisibility(View.VISIBLE);
                                 num = 0;
                                 sf.set(isRandom, isLooping);
                                 ft = fm.beginTransaction();
@@ -126,7 +119,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.settings));
                                 break;
                             case 2://Catalog is opened, music is closed;
-                                apply.setVisibility(View.GONE);
                                 num = 1;
                                 cf.set(isRandom, isLooping);
                                 ft = fm.beginTransaction();
@@ -137,7 +129,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.catalog));
                                 break;
                             case 3://Music is opened, playlists is closed;
-                                apply.setText(getResources().getText(R.string.playAll));
                                 num = 2;
                                 mf.setIsRandom(isRandom);
                                 ft = fm.beginTransaction();
@@ -148,8 +139,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.isPlaying));
                                 break;
                             case 4://Playlists is opened, ServerMusic is closed;
-                                apply.setText(getResources().getText(R.string.newPlaylist));
-                                apply.setVisibility(View.VISIBLE);
                                 num = 3;
                                 ft = fm.beginTransaction();
                                 ft.replace(R.id.fl, pf);
@@ -163,7 +152,6 @@ public class MainActivity extends FragmentActivity {
                     case R.id.next:
                         switch(num){
                             case 0://Catalog is opened, settings is closed;
-                                apply.setVisibility(View.GONE);
                                 num = 1;
                                 cf.set(isRandom, isLooping);
                                 ft = fm.beginTransaction();
@@ -174,8 +162,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.catalog));
                                 break;
                             case 1://Music is opened, catalog is closed;
-                                apply.setText(getResources().getText(R.string.playAll));
-                                apply.setVisibility(View.VISIBLE);
                                 num = 2;
                                 mf.setIsRandom(isRandom);
                                 ft = fm.beginTransaction();
@@ -186,7 +172,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.isPlaying));
                                 break;
                             case 2://Playlists is opened, Music is closed;
-                                apply.setText(getResources().getText(R.string.newPlaylist));
                                 num = 3;
                                 ft = fm.beginTransaction();
                                 ft.replace(R.id.fl, pf);
@@ -196,7 +181,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.Playlists));
                                 break;
                             case 3://ServerMusicFragment is opened, Playlists is closed;
-                                apply.setVisibility(View.GONE);
                                 num = 4;
                                 ft = fm.beginTransaction();
                                 ft.replace(R.id.fl, smf);
@@ -206,8 +190,6 @@ public class MainActivity extends FragmentActivity {
                                 nowItem.setText(getResources().getText(R.string.Lobby));
                                 break;
                             case 4://Settings is opened, ServerMusic is closed;
-                                apply.setText(getResources().getText(R.string.apply));
-                                apply.setVisibility(View.VISIBLE);
                                 num = 0;
                                 sf.set(isRandom, isLooping);
                                 ft = fm.beginTransaction();
@@ -219,31 +201,11 @@ public class MainActivity extends FragmentActivity {
                                 break;
                         }
                         break;
-                    case R.id.apply:
-                        switch(num) {
-                            case 0:
-                                applyChanges();
-                                break;
-                            case 2:
-                                music = new TreeMap<>();
-                                playlist = new ArrayList<>();
-                                playAllMusic(new Environment().getExternalStorageDirectory());
-                                for (File f: music.values())playlist.add(f);
-                                cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                                mf.setPlaylistFromActivity(playlist);
-                                break;
-                            case 3:
-                                NewPlaylistDialog newPlaylistDialog = new NewPlaylistDialog();
-                                newPlaylistDialog.show(fm, "newPlaylist");
-                                break;
-                        }
-                        break;
                 }
             }
         };
         prev.setOnClickListener(listener);
         next.setOnClickListener(listener);
-        apply.setOnClickListener(listener);
     }
     public void onBackPressed(){
         if(num == 1) cf.onBackPressed();
@@ -315,64 +277,36 @@ public class MainActivity extends FragmentActivity {
         super.onDestroy();
         save();
     }
-    public void applyChanges(){
+    public void applyChanges(int back, int text){
         isRandom = sf.getRan();
         isLooping = sf.getLoop();
         color = sf.getColorNum();
         cf.set(isRandom, isLooping);
-        if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
-        else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
-        else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
-        else if(color == 3) changeColor(getResources().getColor(R.color.gray), getResources().getColor(R.color.pink));
-        else if(color == 4) changeColor(getResources().getColor(R.color.greenLime), getResources().getColor(R.color.darkBrown));
-        else if(color == 5) changeColor(getResources().getColor(R.color.lightGreen), getResources().getColor(R.color.red));
-        else if(color == 6) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
-        else if(color == 7) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
-        else if(color == 8) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
-        else if(color == 9) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
-        else if(color == 10) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
-        else if(color == 11) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
-        else if(color == 12) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
-        else if(color == 13) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
-        else if(color == 14) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
-        else if(color == 15) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
-        else if(color == 16) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
-        else if(color == 17) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
-        else if(color == 18) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
-        else if(color == 19) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
-        sf.apply();
+        nowItem.setTextColor(text);
+        constraintLayout.setBackgroundColor(back);
+        cf.changeColor(text);
+        mf.changeColor(text);
+        pf.changeColor(text);
+        smf.changeColor(text);
     }
-    public void playAllMusic(File file){
-        for(File f: file.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File pathname, String s) {
-                return new File(pathname.getAbsolutePath() + "/" + s).isDirectory() ||
-                        s.contains(".mp3") ||
-                        s.contains(".ac3") ||
-                        s.contains(".flac") ||
-                        s.contains(".ogg") ||
-                        s.contains(".wav") ||
-                        s.contains(".wma");
-            }
-        })){
-            if(f.isDirectory()) playAllMusic(f);
-            else music.put(f.getName(), f);
-        }
-    }
+
     public void setNewPlaylistName(String s){
         pf.createNewPlaylist(s);
     }
-    public Button gotApply(){return apply;}
     public void playlistFromNowPlays(String s){
         pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
     }
     public void changeColor(int back, int text){
         nowItem.setTextColor(text);
         constraintLayout.setBackgroundColor(back);
-        sf.changeColor(text);
         cf.changeColor(text);
         mf.changeColor(text);
         pf.changeColor(text);
         smf.changeColor(text);
+        sf.setColor(text);
+    }
+    public void newPlaylist(){
+        NewPlaylistDialog newPlaylistDialog = new NewPlaylistDialog();
+        newPlaylistDialog.show(fm, "newPlaylist");
     }
 }

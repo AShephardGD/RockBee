@@ -6,6 +6,17 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        app:layout_constraintBottom_toBottomOf="@+id/MusicListView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@mipmap/rockbee_foreground" />
+
     <ListView
         android:id="@+id/MusicListView"
         android:layout_width="0dp"

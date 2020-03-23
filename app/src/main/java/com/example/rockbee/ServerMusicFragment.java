@@ -11,7 +11,7 @@ public class ServerMusicFragment extends Fragment {
     private int color;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
-        View view = inflater.inflate(R.layout.fragment_listview, container, false);
+        View view = inflater.inflate(R.layout.catalog, container, false);
         return view;
     }
     public void changeColor(int text){color = text;}

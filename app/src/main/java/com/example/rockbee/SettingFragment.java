@@ -4,22 +4,23 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 public class SettingFragment extends Fragment {
     private Switch random;
     private RadioButton loop0, loop1, loop2;
     private boolean isRandom = false;
     private int isLooping = 0;
-    private RadioButton[] radioButtons = new RadioButton[20];
+    private RadioButton[] radioButtons = new RadioButton[19];
     private int colorNum = 0, color;
-    private LinearLayout linearLayout;
     private TextView tw1, tw2;
+    private FloatingActionButton fab;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.settings, container, false);
@@ -29,7 +30,7 @@ public class SettingFragment extends Fragment {
         loop2 = view.findViewById(R.id.loop2);
         tw1 = view.findViewById(R.id.textView);
         tw2 = view.findViewById(R.id.textView2);
-        linearLayout = view.findViewById(R.id.sf);
+        fab = view.findViewById(R.id.fab2);
         radioButtons[0] = view.findViewById(R.id.radioButton);
         radioButtons[1] = view.findViewById(R.id.radioButton2);
         radioButtons[2] = view.findViewById(R.id.radioButton3);
@@ -49,7 +50,6 @@ public class SettingFragment extends Fragment {
         radioButtons[16] = view.findViewById(R.id.radioButton17);
         radioButtons[17] = view.findViewById(R.id.radioButton18);
         radioButtons[18] = view.findViewById(R.id.radioButton19);
-        radioButtons[19] = view.findViewById(R.id.radioButton20);
         radioButtons[colorNum].setChecked(true);
         random.setChecked(isRandom);
         tw1.setTextColor(color);
@@ -135,9 +135,6 @@ public class SettingFragment extends Fragment {
                     case R.id.radioButton19:
                         colorNum = 18;
                         break;
-                    case R.id.radioButton20:
-                        colorNum = 19;
-                        break;
                 }
             }
         };
@@ -146,6 +143,30 @@ public class SettingFragment extends Fragment {
         loop1.setOnClickListener(listener);
         loop2.setOnClickListener(listener);
         for(RadioButton rb: radioButtons) rb.setOnClickListener(listener);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(colorNum == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
+                else if(colorNum == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
+                else if(colorNum == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
+                else if(colorNum == 3) changeColor(getResources().getColor(R.color.gray), getResources().getColor(R.color.pink));
+                else if(colorNum == 4) changeColor(getResources().getColor(R.color.greenLime), getResources().getColor(R.color.darkBrown));
+                else if(colorNum == 5) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
+                else if(colorNum == 6) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
+                else if(colorNum == 7) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
+                else if(colorNum == 8) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
+                else if(colorNum == 9) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
+                else if(colorNum == 10) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
+                else if(colorNum == 11) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
+                else if(colorNum == 12) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
+                else if(colorNum == 13) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
+                else if(colorNum == 14) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
+                else if(colorNum == 15) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
+                else if(colorNum == 16) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
+                else if(colorNum == 17) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
+                else if(colorNum == 18) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
+            }
+        });
         return view;
     }
     public void set(boolean ran, int loops){
@@ -160,8 +181,8 @@ public class SettingFragment extends Fragment {
     }
     public int getColorNum() { return colorNum; }
     public void setColorNum(int colorNum) { this.colorNum = colorNum; }
-    public void changeColor(int text){color = text;}
-    public void apply(){
+    public void changeColor(int back, int text){
+        color = text;
         tw1.setTextColor(color);
         tw2.setTextColor(color);
         random.setTextColor(color);
@@ -169,5 +190,7 @@ public class SettingFragment extends Fragment {
         loop1.setTextColor(color);
         loop2.setTextColor(color);
         for(RadioButton rb: radioButtons) rb.setTextColor(color);
+        ((MainActivity) getActivity()).applyChanges(back, text);
     }
+    public void setColor(int c){color = c;}
 }

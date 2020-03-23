@@ -1,13 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/sf"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/note" />
+
     <ScrollView
+        android:id="@+id/scrollView2"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -99,88 +116,82 @@
                     android:id="@+id/radioButton6"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/lightGreen_red" />
+                    android:text="@string/cherryRed_lightOrange" />
 
                 <RadioButton
                     android:id="@+id/radioButton7"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/cherryRed_lightOrange" />
+                    android:text="@string/brown_veryLightBlue" />
 
                 <RadioButton
                     android:id="@+id/radioButton8"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/brown_veryLightBlue" />
+                    android:text="@string/darkBrown_Yellow" />
 
                 <RadioButton
                     android:id="@+id/radioButton9"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/darkBrown_Yellow" />
+                    android:text="@string/orange_blue" />
 
                 <RadioButton
                     android:id="@+id/radioButton10"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/orange_blue" />
+                    android:text="@string/lightOrange_olive" />
 
                 <RadioButton
                     android:id="@+id/radioButton11"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/lightOrange_olive" />
+                    android:text="@string/darkOrange_paleYellow" />
 
                 <RadioButton
                     android:id="@+id/radioButton12"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/darkOrange_paleYellow" />
+                    android:text="@string/paleYellow_red" />
 
                 <RadioButton
                     android:id="@+id/radioButton13"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/paleYellow_red" />
+                    android:text="@string/goldYellow_azure" />
 
                 <RadioButton
                     android:id="@+id/radioButton14"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/goldYellow_azure" />
+                    android:text="@string/turquoise_darkPurple" />
 
                 <RadioButton
                     android:id="@+id/radioButton15"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/turquoise_darkPurple" />
+                    android:text="@string/electrician_goldYellow" />
 
                 <RadioButton
                     android:id="@+id/radioButton16"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/electrician_goldYellow" />
+                    android:text="@string/darkBlue_yellowGreen" />
 
                 <RadioButton
                     android:id="@+id/radioButton17"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/darkBlue_yellowGreen" />
+                    android:text="@string/lily_darkPurple" />
 
                 <RadioButton
                     android:id="@+id/radioButton18"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/lily_darkPurple" />
-
-                <RadioButton
-                    android:id="@+id/radioButton19"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:text="@string/darkPurple_turquoise" />
 
                 <RadioButton
-                    android:id="@+id/radioButton20"
+                    android:id="@+id/radioButton19"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/pink_olive" />
@@ -190,4 +201,4 @@
         </LinearLayout>
     </ScrollView>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
