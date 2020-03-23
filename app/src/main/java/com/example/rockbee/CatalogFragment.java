@@ -31,6 +31,7 @@ public class CatalogFragment extends Fragment {
     private SeekBar seekBar;
     private MusicFragment mf;
     private PlaylistFragment pf;
+    private int color;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_listview, container, false);
@@ -78,7 +79,7 @@ public class CatalogFragment extends Fragment {
         } catch (NullPointerException e) {
             Toast.makeText(getActivity(), "Не могу открыть", Toast.LENGTH_LONG).show();
         }
-        CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg));
+        CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg), color);
         lv.setAdapter(adapter);
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -217,7 +218,7 @@ public class CatalogFragment extends Fragment {
                     if(file.isFile())playlist.add(file);
                 }
             } catch (NullPointerException e) {}
-            CatalogAdapter adapter = new CatalogAdapter(getActivity(), files,"" + getResources().getText(R.string.cg));
+            CatalogAdapter adapter = new CatalogAdapter(getActivity(), files,"" + getResources().getText(R.string.cg), color);
             cg.setAdapter(adapter);
             cg.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -243,4 +244,5 @@ public class CatalogFragment extends Fragment {
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
     public void setPlaylistFragment(PlaylistFragment fragment) {pf = fragment;}
+    public void changeColor(int text){color = text;}
 }

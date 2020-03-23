@@ -6,7 +6,7 @@
     <string name="Playlists">Плейлисты</string>
     <string name="Lobby">Онлайн</string>
     <string name="isLooping">Режим повторения по умолчанию:</string>
-    <string name="isRandom">Случайный порядок по умолчанию</string>
+    <string name="isRandom">Случайный порядок по умолчанию:</string>
     <string name="loop0">Без повторений</string>
     <string name="loop1">Повторять все</string>
     <string name="loop2">Повторять один трек</string>
@@ -29,4 +29,25 @@
     <string name="deleteFromNowPlays">Удалить из текущего плейлиста?</string>
     <string name="addToNowPlays">Добавить в текущий плейлист</string>
     <string name="addNowPlays">Сохранить текущий плейлист</string>
+    <string name="chooseColor">Выбрать тему:</string>
+    <string name="white_Black">Белый/Черный</string>
+    <string name="black_white">Черный/Белый</string>
+    <string name="beige_emerald">Бежевый/Изумрудный</string>
+    <string name="gray_pink">Серый/Розовый</string>
+    <string name="greenLime_darkBrown">Зеленый Лайм/Темно-коричневый</string>
+    <string name="lightGreen_red">Салатовый/Красный</string>
+    <string name="cherryRed_lightOrange">Вишнево-красный/Светло-Оранжевый</string>
+    <string name="brown_veryLightBlue">Коричневый/Светло-голубой</string>
+    <string name="darkBrown_Yellow">Темно-коричневый/Желтый</string>
+    <string name="orange_blue">Оранжевый/Синий</string>
+    <string name="lightOrange_olive">Светло-оранжевый/Коричневый</string>
+    <string name="darkOrange_paleYellow">Темно-оранжевый/Бледно-желтый</string>
+    <string name="paleYellow_red">Бледно-желтый/Красный</string>
+    <string name="goldYellow_azure">Золотисто-желтый/Лазурный</string>
+    <string name="turquoise_darkPurple">Бирюзовый/Фиолетовый</string>
+    <string name="electrician_goldYellow">Электрик/Золотистый-желтый</string>
+    <string name="darkBlue_yellowGreen">Темно-синий/Желтовато-зеленый</string>
+    <string name="lily_darkPurple">Лиловый/Темно-фиолетовый</string>
+    <string name="darkPurple_turquoise">Темно-фиолетовый/Бирюзовый</string>
+    <string name="pink_olive">Розовый/Оливковый</string>
 </resources>

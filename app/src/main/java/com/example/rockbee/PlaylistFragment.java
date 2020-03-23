@@ -24,7 +24,7 @@ public class PlaylistFragment extends Fragment {
     private ArrayList<Integer> sizeOfPlaylist;
     private ArrayList<File> tmpPlaylist;
     private CatalogFragment cf;
-    private int num = 0;
+    private int num = 0, color;
     private MusicFragment mf;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
@@ -36,7 +36,7 @@ public class PlaylistFragment extends Fragment {
             names.add(entry.getKey());
             sizeOfPlaylist.add(entry.getValue().size());
         }
-        PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+        PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -44,7 +44,7 @@ public class PlaylistFragment extends Fragment {
                 ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
                 tmpPlaylist = new ArrayList<>(playlists.get(names.get(position)));
                 num = 1;
-                CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
                 listView.setAdapter(adapter);
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
@@ -61,7 +61,7 @@ public class PlaylistFragment extends Fragment {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
                                         tmpPlaylist.remove(position1);
-                                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
                                         listView.setAdapter(adapter);
                                         playlists.put(names.get(position), tmpPlaylist);
                                     }
@@ -91,7 +91,7 @@ public class PlaylistFragment extends Fragment {
                                     names.add(entry.getKey());
                                     sizeOfPlaylist.add(entry.getValue().size());
                                 }
-                                PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                                PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
                                 listView.setAdapter(adapter);
                             }
                         })
@@ -116,7 +116,7 @@ public class PlaylistFragment extends Fragment {
                 names.add(entry.getKey());
                 sizeOfPlaylist.add(entry.getValue().size());
             }
-            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
             listView.setAdapter(adapter);
         } else if(s.equals("")) Toast.makeText(getActivity(), "" + getResources().getText(R.string.noNamePlaylist), Toast.LENGTH_SHORT).show();
         else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
@@ -132,7 +132,7 @@ public class PlaylistFragment extends Fragment {
                 names.add(entry.getKey());
                 sizeOfPlaylist.add(entry.getValue().size());
             }
-            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
             listView.setAdapter(adapter);
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -140,7 +140,7 @@ public class PlaylistFragment extends Fragment {
                     ((MainActivity) getActivity()).gotApply().setVisibility(View.GONE);
                     tmpPlaylist = new ArrayList<>(playlists.get(names.get(position1)));
                     num = 1;
-                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
                     listView.setAdapter(adapter);
                     listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                         @Override
@@ -157,7 +157,7 @@ public class PlaylistFragment extends Fragment {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             tmpPlaylist.remove(position1);
-                                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg));
+                                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
                                             listView.setAdapter(adapter);
                                             playlists.put(names.get(position), tmpPlaylist);
                                         }
@@ -187,7 +187,7 @@ public class PlaylistFragment extends Fragment {
                                         names.add(entry.getKey());
                                         sizeOfPlaylist.add(entry.getValue().size());
                                     }
-                                    PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+                                    PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
                                     listView.setAdapter(adapter);
                                 }
                             })
@@ -227,9 +227,10 @@ public class PlaylistFragment extends Fragment {
                 names.add(entry.getKey());
                 sizeOfPlaylist.add(entry.getValue().size());
             }
-            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist);
+            PlaylistsAdapter adapter = new PlaylistsAdapter(getActivity(), names, "" + getResources().getText(R.string.cg), sizeOfPlaylist, color);
             listView.setAdapter(adapter);
         } else if(s.equals("")) Toast.makeText(getActivity(), "" + getResources().getText(R.string.noNamePlaylist), Toast.LENGTH_SHORT).show();
         else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
     }
+    public void changeColor(int text) {color = text;}
 }

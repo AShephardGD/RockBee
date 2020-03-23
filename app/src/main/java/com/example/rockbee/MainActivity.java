@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -42,12 +43,12 @@ public class MainActivity extends FragmentActivity {
     private FragmentManager fm;
     private FragmentTransaction ft;
     private Button prev, next, apply;
-    public SettingFragment sf = new SettingFragment(); //0
-    public CatalogFragment cf = new CatalogFragment();//1
-    public MusicFragment mf = new MusicFragment();//2
-    public PlaylistFragment pf = new PlaylistFragment();//3
+    private SettingFragment sf = new SettingFragment(); //0
+    private CatalogFragment cf = new CatalogFragment();//1
+    private MusicFragment mf = new MusicFragment();//2
+    private PlaylistFragment pf = new PlaylistFragment();//3
     private ServerMusicFragment smf = new ServerMusicFragment();//4
-    private int num = 1, isLooping = 0;
+    private int num = 1, isLooping = 0, color = 0;
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
@@ -55,8 +56,9 @@ public class MainActivity extends FragmentActivity {
     private ArrayList<File> playlist;
     private TreeMap<String, File> music;
     private TreeMap<String, ArrayList<File>> playlists;
+    private ConstraintLayout constraintLayout;
+    private SharedPreferences sPref;
 
-    public SharedPreferences sPref;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         if (ContextCompat.checkSelfPermission(this,
@@ -69,6 +71,7 @@ public class MainActivity extends FragmentActivity {
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        constraintLayout = findViewById(R.id.constraintLayout);
         mediaPlayer = new MediaPlayer();
         nowItem = findViewById(R.id.nameOfFrag);
         prev = findViewById(R.id.previous);
@@ -84,6 +87,7 @@ public class MainActivity extends FragmentActivity {
         cf.setMusicFragment(mf);
         cf.setMediaPlayer(mediaPlayer);
         load();
+        sf.setColorNum(color);
         cf.set(isRandom, isLooping);
         ft.commit();
         progress.setMusicFragment(mf);
@@ -264,6 +268,7 @@ public class MainActivity extends FragmentActivity {
         ed.putInt("numbersOfPlaylists", i);
         ed.putBoolean("IsRandom", isRandom);
         ed.putInt("IsLooping", isLooping);
+        ed.putInt("color", color);
         ed.commit();
     }
     public void load() {
@@ -283,6 +288,27 @@ public class MainActivity extends FragmentActivity {
         pf.setPlaylists(playlists);
         isRandom = sPref.getBoolean("IsRandom", false);
         isLooping = sPref.getInt("IsLooping", 0);
+        color = sPref.getInt("color", 0);
+        if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
+        else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
+        else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
+        else if(color == 3) changeColor(getResources().getColor(R.color.gray), getResources().getColor(R.color.pink));
+        else if(color == 4) changeColor(getResources().getColor(R.color.greenLime), getResources().getColor(R.color.darkBrown));
+        else if(color == 5) changeColor(getResources().getColor(R.color.lightGreen), getResources().getColor(R.color.red));
+        else if(color == 6) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
+        else if(color == 7) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
+        else if(color == 8) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
+        else if(color == 9) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
+        else if(color == 10) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
+        else if(color == 11) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
+        else if(color == 12) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
+        else if(color == 13) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
+        else if(color == 14) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
+        else if(color == 15) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
+        else if(color == 16) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
+        else if(color == 17) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
+        else if(color == 18) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
+        else if(color == 19) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
     }
     @Override
     protected void onDestroy() {
@@ -292,7 +318,29 @@ public class MainActivity extends FragmentActivity {
     public void applyChanges(){
         isRandom = sf.getRan();
         isLooping = sf.getLoop();
+        color = sf.getColorNum();
         cf.set(isRandom, isLooping);
+        if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
+        else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
+        else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
+        else if(color == 3) changeColor(getResources().getColor(R.color.gray), getResources().getColor(R.color.pink));
+        else if(color == 4) changeColor(getResources().getColor(R.color.greenLime), getResources().getColor(R.color.darkBrown));
+        else if(color == 5) changeColor(getResources().getColor(R.color.lightGreen), getResources().getColor(R.color.red));
+        else if(color == 6) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
+        else if(color == 7) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
+        else if(color == 8) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
+        else if(color == 9) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
+        else if(color == 10) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
+        else if(color == 11) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
+        else if(color == 12) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
+        else if(color == 13) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
+        else if(color == 14) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
+        else if(color == 15) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
+        else if(color == 16) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
+        else if(color == 17) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
+        else if(color == 18) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
+        else if(color == 19) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
+        sf.apply();
     }
     public void playAllMusic(File file){
         for(File f: file.listFiles(new FilenameFilter() {
@@ -317,5 +365,14 @@ public class MainActivity extends FragmentActivity {
     public Button gotApply(){return apply;}
     public void playlistFromNowPlays(String s){
         pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
+    }
+    public void changeColor(int back, int text){
+        nowItem.setTextColor(text);
+        constraintLayout.setBackgroundColor(back);
+        sf.changeColor(text);
+        cf.changeColor(text);
+        mf.changeColor(text);
+        pf.changeColor(text);
+        smf.changeColor(text);
     }
 }

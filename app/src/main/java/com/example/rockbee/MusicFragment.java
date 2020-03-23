@@ -26,7 +26,7 @@ public class MusicFragment extends Fragment {
     private SeekBar seekBar = null;
     private CatalogFragment cf;
     private TextView time, name;
-    private int nowSec, nowMin, min, sec;
+    private int nowSec, nowMin, min, sec, color;
     private boolean isRandom;
     private LookingForProgress progress;
     private File isPlaying = null;
@@ -48,12 +48,14 @@ public class MusicFragment extends Fragment {
         back.setImageResource(R.drawable.ic_media_rew);
         forward.setImageResource(R.drawable.ic_media_ff);
         resetTime();
+        time.setTextColor(color);
+        name.setTextColor(color);
         if(isPlaying != null) name.setText(isPlaying.getName());
         else name.setText(getResources().getText(R.string.emptyPlaylist));
         seekBar.setMax(mediaPlayer.getDuration());
         seekBar.setProgress(mediaPlayer.getCurrentPosition());
         nowPlays = view.findViewById(R.id.MusicListView);
-        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
+        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
         nowPlays.setAdapter(adapter);
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -76,7 +78,7 @@ public class MusicFragment extends Fragment {
                     public void onClick(DialogInterface dialog, int which) {
                         if(isPlaying.equals(playlist.get(position))) next.performClick();
                         playlist.remove(position);
-                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
+                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
                         nowPlays.setAdapter(adapter);
                     }
                 }).create().show();
@@ -189,9 +191,10 @@ public class MusicFragment extends Fragment {
     public ImageView getPS(){return ps;}
     public void setPlaylistFromActivity(ArrayList<File> play) {
         playlist = new ArrayList<>(play);
-        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg));
+        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
         if(nowPlays != null)nowPlays.setAdapter(adapter);
     }
     public void addNewSongToNowPlays(File file){ playlist.add(file); }
     public ArrayList<File> getPlaylist(){return playlist;}
+    public void changeColor(int text) {color = text;}
 }

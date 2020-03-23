@@ -13,9 +13,11 @@ import java.util.ArrayList;
 
 public class CatalogAdapter extends ArrayAdapter<File> {
     private String nums;
-    public CatalogAdapter(Context context, ArrayList<File> arr, String s) {
+    private int color;
+    public CatalogAdapter(Context context, ArrayList<File> arr, String s, int color) {
         super(context, R.layout.files, arr);
         nums = s;
+        this.color = color;
     }
 
     @Override
@@ -26,6 +28,7 @@ public class CatalogAdapter extends ArrayAdapter<File> {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.files, null);
         }
         ((TextView) convertView.findViewById(R.id.fileName)).setText(file.getName());
+        ((TextView) convertView.findViewById(R.id.fileName)).setTextColor(color);
         if(file.isFile()) {
             ((ImageView) convertView.findViewById(R.id.fileOrDirectory)).setImageResource(R.drawable.note);
             (convertView.findViewById(R.id.nums)).setVisibility(View.GONE);
@@ -33,6 +36,7 @@ public class CatalogAdapter extends ArrayAdapter<File> {
         else {
             ((ImageView) convertView.findViewById(R.id.fileOrDirectory)).setImageResource(R.drawable.directory);
             ((TextView) convertView.findViewById(R.id.nums)).setText(nums + ": " + file.listFiles().length);
+            ((TextView) convertView.findViewById(R.id.nums)).setTextColor(color);
         }
         return convertView;
     }
