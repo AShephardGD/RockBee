@@ -1,24 +1,22 @@
 package com.example.rockbee;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.Environment;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager.widget.ViewPager;
+
+import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,19 +27,16 @@ import java.util.TreeMap;
 Так же следует проработать тот вариант, когда пользователь отказался давать разрешения.
 2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
 3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
+4)Не знаю, как менять цвет текста в табсах. Но здесь скорее ошибка - я.
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
-3)Изменения гаммы(необязательно)
-4)Меню свайпов(необязательно)
-5)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
+3)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
  */
 
 public class MainActivity extends FragmentActivity {
     private MediaPlayer mediaPlayer;
     private FragmentManager fm;
-    private FragmentTransaction ft;
-    private Button prev, next;
     private SettingFragment sf = new SettingFragment(); //0
     private CatalogFragment cf = new CatalogFragment();//1
     private MusicFragment mf = new MusicFragment();//2
@@ -51,10 +46,11 @@ public class MainActivity extends FragmentActivity {
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
-    private TextView nowItem;
     private TreeMap<String, ArrayList<File>> playlists;
-    private ConstraintLayout constraintLayout;
     private SharedPreferences sPref;
+    private SectionsPagerAdapter sectionsPagerAdapter;
+    private ViewPager viewPager;
+    private TabLayout tabs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,147 +63,31 @@ public class MainActivity extends FragmentActivity {
             // Из-за этого в первый раз на экране пусто???
         }
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-        constraintLayout = findViewById(R.id.constraintLayout);
         mediaPlayer = new MediaPlayer();
-        nowItem = findViewById(R.id.nameOfFrag);
-        prev = findViewById(R.id.previous);
-        next = findViewById(R.id.next);
         fm = getSupportFragmentManager();
-        ft = fm.beginTransaction();
-        ft.add(R.id.fl, cf);
         mf.setThread(progress);
         mf.setMediaPlayer(mediaPlayer);
         mf.setCatalogFragment(cf);
         cf.setPlaylistFragment(pf);
         cf.setMusicFragment(mf);
         cf.setMediaPlayer(mediaPlayer);
+        progress.setMusicFragment(mf);
+        progress.start();
+        pf.setCatalogFragment(cf);
+        pf.setMusicFragment(mf);
+        setContentView(R.layout.activity_main);
+        sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, this);
+        viewPager = findViewById(R.id.view_pager);
+        viewPager.setAdapter(sectionsPagerAdapter);
+        tabs = findViewById(R.id.tabs);
+        tabs.setupWithViewPager(viewPager);
+        viewPager.setCurrentItem(1);
         load();
         sf.setColorNum(color);
         cf.set(isRandom, isLooping);
-        ft.commit();
-        progress.setMusicFragment(mf);
-        progress.start();
-        nowItem.setText(getResources().getText(R.string.catalog));
-        prev.setText("<<" + getResources().getText(R.string.settings));
-        next.setText(getResources().getText(R.string.isPlaying) + ">>");
-        pf.setCatalogFragment(cf);
-        pf.setMusicFragment(mf);
-        View.OnClickListener listener = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                switch(v.getId()){
-                    case R.id.previous:
-                        switch(num){
-                            case 0://ServerMusicFragment is opened, settings is closed;
-                                num = 4;
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, smf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.Playlists));
-                                next.setText(getResources().getText(R.string.settings) + ">>");
-                                nowItem.setText(getResources().getText(R.string.Lobby));
-                                break;
-                            case 1://Settings is opened, catalog is closed;
-                                num = 0;
-                                sf.set(isRandom, isLooping);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, sf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.Lobby));
-                                next.setText(getResources().getText(R.string.catalog) + ">>");
-                                nowItem.setText(getResources().getText(R.string.settings));
-                                break;
-                            case 2://Catalog is opened, music is closed;
-                                num = 1;
-                                cf.set(isRandom, isLooping);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, cf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.settings));
-                                next.setText(getResources().getText(R.string.isPlaying) + ">>");
-                                nowItem.setText(getResources().getText(R.string.catalog));
-                                break;
-                            case 3://Music is opened, playlists is closed;
-                                num = 2;
-                                mf.setIsRandom(isRandom);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, mf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.catalog));
-                                next.setText(getResources().getText(R.string.Playlists) + ">>");
-                                nowItem.setText(getResources().getText(R.string.isPlaying));
-                                break;
-                            case 4://Playlists is opened, ServerMusic is closed;
-                                num = 3;
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, pf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.isPlaying));
-                                next.setText(getResources().getText(R.string.Lobby) + ">>");
-                                nowItem.setText(getResources().getText(R.string.Playlists));
-                                break;
-                        }
-                        break;
-                    case R.id.next:
-                        switch(num){
-                            case 0://Catalog is opened, settings is closed;
-                                num = 1;
-                                cf.set(isRandom, isLooping);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, cf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.settings));
-                                next.setText(getResources().getText(R.string.isPlaying) + ">>");
-                                nowItem.setText(getResources().getText(R.string.catalog));
-                                break;
-                            case 1://Music is opened, catalog is closed;
-                                num = 2;
-                                mf.setIsRandom(isRandom);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, mf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.catalog));
-                                next.setText(getResources().getText(R.string.Playlists) + ">>");
-                                nowItem.setText(getResources().getText(R.string.isPlaying));
-                                break;
-                            case 2://Playlists is opened, Music is closed;
-                                num = 3;
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, pf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.isPlaying));
-                                next.setText(getResources().getText(R.string.Lobby) + ">>");
-                                nowItem.setText(getResources().getText(R.string.Playlists));
-                                break;
-                            case 3://ServerMusicFragment is opened, Playlists is closed;
-                                num = 4;
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, smf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.Playlists));
-                                next.setText(getResources().getText(R.string.settings) + ">>");
-                                nowItem.setText(getResources().getText(R.string.Lobby));
-                                break;
-                            case 4://Settings is opened, ServerMusic is closed;
-                                num = 0;
-                                sf.set(isRandom, isLooping);
-                                ft = fm.beginTransaction();
-                                ft.replace(R.id.fl, sf);
-                                ft.commit();
-                                prev.setText("<<" + getResources().getText(R.string.Lobby));
-                                next.setText(getResources().getText(R.string.catalog) + ">>");
-                                nowItem.setText(getResources().getText(R.string.settings));
-                                break;
-                        }
-                        break;
-                }
-            }
-        };
-        prev.setOnClickListener(listener);
-        next.setOnClickListener(listener);
     }
     public void onBackPressed(){
+        num = viewPager.getCurrentItem();
         if(num == 1) cf.onBackPressed();
         else if(num == 3) pf.onBackPressed();
         else finish();
@@ -231,7 +111,7 @@ public class MainActivity extends FragmentActivity {
         ed.putBoolean("IsRandom", isRandom);
         ed.putInt("IsLooping", isLooping);
         ed.putInt("color", color);
-        ed.commit();
+        ed.apply();
     }
     public void load() {
         String name;
@@ -240,16 +120,20 @@ public class MainActivity extends FragmentActivity {
         playlists = new TreeMap<>();
         sPref = getPreferences(MODE_PRIVATE);
         int i = sPref.getInt("numbersOfPlaylists", 0);
-        for(int it = 0; it < i; it++){
+        for(int it = 0; it < i; it++) {
             name = sPref.getString(it + "name", "");
             len = sPref.getInt(Integer.toString(it), 0);
             songs = new ArrayList<>();
-            for(int j = 0; j < len; j++)songs.add(new File(sPref.getString(it + Integer.toString(j), "")));
+            for (int j = 0; j < len; j++)
+                songs.add(new File(sPref.getString(it + Integer.toString(j), "")));
             playlists.put(name, songs);
         }
         pf.setPlaylists(playlists);
         isRandom = sPref.getBoolean("IsRandom", false);
         isLooping = sPref.getInt("IsLooping", 0);
+        cf.set(isRandom, isLooping);
+        sf.set(isRandom, isLooping);
+        mf.setIsRandom(isRandom);
         color = sPref.getInt("color", 0);
         if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
         else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
@@ -276,18 +160,21 @@ public class MainActivity extends FragmentActivity {
     protected void onDestroy() {
         super.onDestroy();
         save();
+        mediaPlayer.stop();
+        mediaPlayer.release();
     }
     public void applyChanges(int back, int text){
         isRandom = sf.getRan();
         isLooping = sf.getLoop();
         color = sf.getColorNum();
-        cf.set(isRandom, isLooping);
-        nowItem.setTextColor(text);
-        constraintLayout.setBackgroundColor(back);
         cf.changeColor(text);
         mf.changeColor(text);
         pf.changeColor(text);
         smf.changeColor(text);
+        viewPager.setBackgroundColor(back);
+        tabs.setBackgroundColor(back);
+        cf.set(isRandom, isLooping);
+        mf.setIsRandom(isRandom);
     }
 
     public void setNewPlaylistName(String s){
@@ -297,13 +184,13 @@ public class MainActivity extends FragmentActivity {
         pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
     }
     public void changeColor(int back, int text){
-        nowItem.setTextColor(text);
-        constraintLayout.setBackgroundColor(back);
         cf.changeColor(text);
         mf.changeColor(text);
         pf.changeColor(text);
         smf.changeColor(text);
         sf.setColor(text);
+        viewPager.setBackgroundColor(back);
+        tabs.setBackgroundColor(back);
     }
     public void newPlaylist(){
         NewPlaylistDialog newPlaylistDialog = new NewPlaylistDialog();

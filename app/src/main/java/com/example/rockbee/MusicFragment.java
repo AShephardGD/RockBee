@@ -186,6 +186,10 @@ public class MusicFragment extends Fragment {
     public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
     public void setPlaylist(ArrayList<File> play) {
         playlist = new ArrayList<>(play);
+        if(nowPlays != null){
+            CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+            nowPlays.setAdapter(adapter);
+        }
     }
     public SeekBar getSeekBar(){return seekBar;}
     public void resetTime(){
@@ -210,7 +214,13 @@ public class MusicFragment extends Fragment {
         if(name != null) name.setText(file.getName());
     }
     public ImageView getPS(){return ps;}
-    public void addNewSongToNowPlays(File file){ playlist.add(file); }
+    public void addNewSongToNowPlays(File file){
+        playlist.add(file);
+        if(nowPlays != null){
+            CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+            nowPlays.setAdapter(adapter);
+        }
+    }
     public ArrayList<File> getPlaylist(){return playlist;}
     public void changeColor(int text) {color = text;}
     public void playAllMusic(File file){

@@ -184,55 +184,8 @@ public class CatalogFragment extends Fragment {
     public void onBackPressed(){
         if(parentDirectory.equals(root)) getActivity().finish();
         else {
-            files.clear();
-            parentDirectory = new File(parentDirectory.getParent());
-            try {
-                TreeMap<String, File> directories = new TreeMap<>();
-                for (File file : parentDirectory.listFiles(new FilenameFilter() {
-
-                    @Override
-                    public boolean accept(File file, String s) {
-                        return new File(file.getAbsolutePath() + "/" + s).isDirectory();
-                    }
-                })) {
-                    directories.put(file.getName(), file);
-                }
-                for (File file: directories.values()) files.add(file);
-                directories = new TreeMap<>();
-                for (File file : parentDirectory.listFiles(new FilenameFilter() {
-
-                    @Override
-                    public boolean accept(File file, String s) {
-                        return (s.contains(".mp3") ||
-                                s.contains(".ac3") ||
-                                s.contains(".flac") ||
-                                s.contains(".ogg") ||
-                                s.contains(".wav") ||
-                                s.contains(".wma"));
-                    }
-                })) {
-                    directories.put(file.getName(), file);
-                }
-                for(File file: directories.values()) {
-                    files.add(file);
-                    if(file.isFile())playlist.add(file);
-                }
-            } catch (NullPointerException e) {}
-            CatalogAdapter adapter = new CatalogAdapter(getActivity(), files,"" + getResources().getText(R.string.cg), color);
-            cg.setAdapter(adapter);
-            cg.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    if(files.get(position).isDirectory()) {
-                        parentDirectory = files.get(position);
-                        openDirectory(files.get(position), cg);
-                    }
-                    else {
-                        mf.setPlaylist(playlist);
-                        playMusic(files.get(position), playlist);
-                    }
-                }
-            });
+            openDirectory(parentDirectory.getParentFile(), cg);
+            parentDirectory = parentDirectory.getParentFile();
         }
     }
     public void setMediaPlayer(MediaPlayer mp){
@@ -244,5 +197,10 @@ public class CatalogFragment extends Fragment {
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
     public void setPlaylistFragment(PlaylistFragment fragment) {pf = fragment;}
-    public void changeColor(int text){color = text;}
+    public void changeColor(int text){
+        color = text;
+        if(cg != null) {
+            CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg), color);
+            cg.setAdapter(adapter); }
+    }
 }
