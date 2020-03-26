@@ -1,7 +1,6 @@
 package com.example.rockbee;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
@@ -11,7 +10,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
@@ -28,6 +26,7 @@ import java.util.TreeMap;
 2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
 3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
 4)Не знаю, как менять цвет текста в табсах. Но здесь скорее ошибка - я.
+5)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
@@ -42,7 +41,7 @@ public class MainActivity extends FragmentActivity {
     private MusicFragment mf = new MusicFragment();//2
     private PlaylistFragment pf = new PlaylistFragment();//3
     private ServerMusicFragment smf = new ServerMusicFragment();//4
-    private int num = 1, isLooping = 0, color = 0;
+    private int num = 1, isLooping = 0, color = 1;
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
@@ -63,6 +62,7 @@ public class MainActivity extends FragmentActivity {
             // Из-за этого в первый раз на экране пусто???
         }
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
         mediaPlayer = new MediaPlayer();
         fm = getSupportFragmentManager();
         mf.setThread(progress);
@@ -75,7 +75,6 @@ public class MainActivity extends FragmentActivity {
         progress.start();
         pf.setCatalogFragment(cf);
         pf.setMusicFragment(mf);
-        setContentView(R.layout.activity_main);
         sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, this);
         viewPager = findViewById(R.id.view_pager);
         viewPager.setAdapter(sectionsPagerAdapter);
@@ -134,7 +133,7 @@ public class MainActivity extends FragmentActivity {
         cf.set(isRandom, isLooping);
         sf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
-        color = sPref.getInt("color", 0);
+        color = sPref.getInt("color", 1);
         if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
         else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
         else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));

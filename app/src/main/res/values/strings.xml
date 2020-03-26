@@ -51,4 +51,6 @@
     <string name="darkPurple_turquoise">Темно-фиолетовый/Бирюзовый</string>
     <string name="pink_olive">Розовый/Оливковый</string>
     <string name="saved">Сохранено</string>
+    <string name="cantPlay">Не могу найти треков для воспроизведения</string>
+    <string name="cantDelete">Не удалось удалить</string>
 </resources>

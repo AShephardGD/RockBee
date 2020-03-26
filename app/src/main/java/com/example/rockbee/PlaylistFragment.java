@@ -28,13 +28,20 @@ public class PlaylistFragment extends Fragment {
     private CatalogFragment cf;
     private int num = 0, color;
     private MusicFragment mf;
-    private FloatingActionButton fab;
+    private FloatingActionButton fab, back;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         View view = inflater.inflate(R.layout.playlists, container, false);
         listView = view.findViewById(R.id.playlists);
         names = new ArrayList<>();
         sizeOfPlaylist = new ArrayList<>();
+        back = view.findViewById(R.id.playlistsBack);
+        back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onBackPressed();
+            }
+        });
         for(Map.Entry<String, ArrayList<File>> entry: playlists.entrySet()){
             names.add(entry.getKey());
             sizeOfPlaylist.add(entry.getValue().size());
@@ -46,6 +53,7 @@ public class PlaylistFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
                 fab.hide();
+                back.show();
                 tmpPlaylist = new ArrayList<>(playlists.get(names.get(position)));
                 num = 1;
                 CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
@@ -135,6 +143,7 @@ public class PlaylistFragment extends Fragment {
     public void onBackPressed(){
         if(num == 1){
             num = 0;
+            back.hide();
             fab.show();
             names = new ArrayList<>();
             sizeOfPlaylist = new ArrayList<>();
@@ -148,6 +157,7 @@ public class PlaylistFragment extends Fragment {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, final int position1, long id) {
                     fab.hide();
+                    back.show();
                     tmpPlaylist = new ArrayList<>(playlists.get(names.get(position1)));
                     num = 1;
                     CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);

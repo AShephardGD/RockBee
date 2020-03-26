@@ -15,6 +15,8 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -32,10 +34,18 @@ public class CatalogFragment extends Fragment {
     private MusicFragment mf;
     private PlaylistFragment pf;
     private int color;
+    private FloatingActionButton back;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.catalog, container, false);
        cg = view.findViewById(R.id.catalog);
+       back = view.findViewById(R.id.catalogBack);
+       back.setOnClickListener(new View.OnClickListener() {
+           @Override
+           public void onClick(View v) {
+               onBackPressed();
+           }
+       });
        if(!catalogForTemporaryMusic.exists()) catalogForTemporaryMusic.mkdir();
        if (root.isDirectory()) {
             openDirectory(parentDirectory, cg);
@@ -47,18 +57,19 @@ public class CatalogFragment extends Fragment {
         playlist.clear();
         try {
             TreeMap<String, File> directories = new TreeMap<>();
-            for (File file : f.listFiles(new FilenameFilter() {
+            File[] filesTemp = f.listFiles(new FilenameFilter() {
 
                 @Override
                 public boolean accept(File file, String s) {
                     return new File(file.getAbsolutePath() + "/" + s).isDirectory();
                 }
-            })) {
+            });
+            for (File file : filesTemp) {
                 directories.put(file.getName(), file);
             }
-            for (File file: directories.values()) files.add(file);
+            files.addAll(directories.values());
             directories = new TreeMap<>();
-            for (File file : f.listFiles(new FilenameFilter() {
+            filesTemp = f.listFiles(new FilenameFilter() {
 
                 @Override
                 public boolean accept(File file, String s) {
@@ -69,7 +80,8 @@ public class CatalogFragment extends Fragment {
                             s.contains(".wav") ||
                             s.contains(".wma"));
                 }
-            })) {
+            });
+            for (File file : filesTemp) {
                 directories.put(file.getName(), file);
             }
             for(File file: directories.values()) {
@@ -77,13 +89,14 @@ public class CatalogFragment extends Fragment {
                 if(file.isFile())playlist.add(file);
             }
         } catch (NullPointerException e) {
-            Toast.makeText(getActivity(), "Не могу открыть", Toast.LENGTH_LONG).show();
+            Toast.makeText(getActivity(), getResources().getText(R.string.emptyCatalog), Toast.LENGTH_LONG).show();
         }
         CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg), color);
         lv.setAdapter(adapter);
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                back.show();
                 if(files.get(position).isDirectory()) {
                     parentDirectory = files.get(position);
                     openDirectory(files.get(position), lv);
@@ -103,7 +116,7 @@ public class CatalogFragment extends Fragment {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     if (which == 0) new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.choosePlaylist))
-                                            .setItems(pf.getNames().toArray(new String[pf.getNames().size()]), new DialogInterface.OnClickListener() {
+                                            .setItems(pf.getNames().toArray(new String[0]), new DialogInterface.OnClickListener() {
                                                 @Override
                                                 public void onClick(DialogInterface dialog, int which) {
                                                     pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
@@ -113,9 +126,10 @@ public class CatalogFragment extends Fragment {
                                     .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
-                                            files.get(position).delete();
-                                            files.remove(position);
-                                            openDirectory(parentDirectory, cg);
+                                            if(files.get(position).delete()) {
+                                                files.remove(position);
+                                                openDirectory(parentDirectory, cg);
+                                            } else Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
                                         }
                                     })
                                     .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
@@ -132,9 +146,11 @@ public class CatalogFragment extends Fragment {
                 .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        files.get(position).delete();
-                        files.remove(position);
-                        openDirectory(parentDirectory, cg);
+                        if(files.get(position).delete()) {
+                            files.remove(position);
+                            openDirectory(parentDirectory, cg);
+                        }
+                        else Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
                     }
                 })
                         .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
@@ -186,6 +202,7 @@ public class CatalogFragment extends Fragment {
         else {
             openDirectory(parentDirectory.getParentFile(), cg);
             parentDirectory = parentDirectory.getParentFile();
+            if(parentDirectory.equals(root)) back.hide();
         }
     }
     public void setMediaPlayer(MediaPlayer mp){

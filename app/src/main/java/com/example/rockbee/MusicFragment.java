@@ -1,7 +1,9 @@
 package com.example.rockbee;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
@@ -13,7 +15,10 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -37,6 +42,7 @@ public class MusicFragment extends Fragment {
     private File isPlaying = null;
     private FloatingActionButton fab;
     private TreeMap<String, File> music;
+    private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -79,10 +85,12 @@ public class MusicFragment extends Fragment {
                 music = new TreeMap<>();
                 playlist = new ArrayList<>();
                 playAllMusic(new Environment().getExternalStorageDirectory());
-                for (File f: music.values())playlist.add(f);
-                cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-                nowPlays.setAdapter(adapter);
+                playlist.addAll(music.values());
+                try {
+                    cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                    nowPlays.setAdapter(adapter);
+                } catch (IndexOutOfBoundsException e){}
             }
         });
         nowPlays.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
@@ -224,20 +232,33 @@ public class MusicFragment extends Fragment {
     public ArrayList<File> getPlaylist(){return playlist;}
     public void changeColor(int text) {color = text;}
     public void playAllMusic(File file){
-        for(File f: file.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File pathname, String s) {
-                return new File(pathname.getAbsolutePath() + "/" + s).isDirectory() ||
-                        s.contains(".mp3") ||
-                        s.contains(".ac3") ||
-                        s.contains(".flac") ||
-                        s.contains(".ogg") ||
-                        s.contains(".wav") ||
-                        s.contains(".wma");
+        try {
+            File[] files = file.listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File pathname, String s) {
+                    return new File(pathname.getAbsolutePath() + "/" + s).isDirectory() ||
+                            s.contains(".mp3") ||
+                            s.contains(".ac3") ||
+                            s.contains(".flac") ||
+                            s.contains(".ogg") ||
+                            s.contains(".wav") ||
+                            s.contains(".wma");
+                }
+            });
+            for (File f : files) {
+                if (f.isDirectory()) playAllMusic(f);
+                else music.put(f.getName(), f);
             }
-        })){
-            if(f.isDirectory()) playAllMusic(f);
-            else music.put(f.getName(), f);
+        } catch (NullPointerException e){
+            if (ContextCompat.checkSelfPermission(getActivity(),
+                    Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(getActivity(),
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
+                // Из-за этого в первый раз на экране пусто???
+            }
+            else Toast.makeText(getActivity(), getResources().getText(R.string.cantPlay), Toast.LENGTH_SHORT).show();
         }
     }
 }
