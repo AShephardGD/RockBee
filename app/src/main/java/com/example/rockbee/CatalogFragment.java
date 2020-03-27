@@ -55,9 +55,9 @@ public class CatalogFragment extends Fragment {
            }
        });
        if(!catalogForTemporaryMusic.exists()) catalogForTemporaryMusic.mkdir();
-       if (root.isDirectory()) {
-            openDirectory(parentDirectory, cg);
-       }
+       if (root.isDirectory() && ContextCompat.checkSelfPermission(getActivity(),
+               Manifest.permission.READ_EXTERNAL_STORAGE)
+               == PackageManager.PERMISSION_GRANTED)openDirectory(root, cg);
        return view;
     }
     public void openDirectory(final File f, final ListView lv) {
@@ -102,8 +102,7 @@ public class CatalogFragment extends Fragment {
                     != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(getActivity(),
                         new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
-                // Из-за этого в первый раз на экране пусто???
+                        MY_PERMISSIONS_REQUEST_STORAGE);
             }
             else Toast.makeText(getActivity(), getResources().getText(R.string.emptyCatalog), Toast.LENGTH_LONG).show();
         }
@@ -236,4 +235,5 @@ public class CatalogFragment extends Fragment {
             CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg), color);
             cg.setAdapter(adapter); }
     }
+    public ListView getCg(){return cg;}
 }

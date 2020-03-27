@@ -3,10 +3,9 @@ package com.example.rockbee;
 import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.widget.Toast;
+import android.os.Environment;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -23,11 +22,9 @@ import java.util.TreeMap;
 
 /*
 Список Ошибок:
-1)MainActivity(52-59): Проверяет выданные разрешения. Если в первый раз выдать разрешения, код не успеет учесть изменения и все равно пойдет так, как будто разрешение не было выдано.
-Так же следует проработать тот вариант, когда пользователь отказался давать разрешения.
-2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
-3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
-4)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
+1)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
+2)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
+3)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
@@ -52,6 +49,7 @@ public class MainActivity extends FragmentActivity {
     private SectionsPagerAdapter sectionsPagerAdapter;
     private ViewPager viewPager;
     private TabLayout tabs;
+    private File root = new Environment().getExternalStorageDirectory();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +58,7 @@ public class MainActivity extends FragmentActivity {
                 != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this,
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
-            // Из-за этого в первый раз на экране пусто???
+                    MY_PERMISSIONS_REQUEST_STORAGE);
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -197,5 +194,18 @@ public class MainActivity extends FragmentActivity {
     public void newPlaylist(){
         NewPlaylistDialog newPlaylistDialog = new NewPlaylistDialog();
         newPlaylistDialog.show(fm, "newPlaylist");
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+        switch(requestCode){
+            case MY_PERMISSIONS_REQUEST_STORAGE:
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                    if (root.isDirectory())cf.openDirectory(root, cf.getCg());
+                } else{
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            MY_PERMISSIONS_REQUEST_STORAGE);
+                }
+        }
     }
 }

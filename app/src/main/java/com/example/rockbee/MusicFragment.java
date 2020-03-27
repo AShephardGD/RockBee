@@ -255,8 +255,7 @@ public class MusicFragment extends Fragment {
                     != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(getActivity(),
                         new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        MY_PERMISSIONS_REQUEST_STORAGE);  // код не останавливается на месте требовании разрешения, а продолжает выполнение
-                // Из-за этого в первый раз на экране пусто???
+                        MY_PERMISSIONS_REQUEST_STORAGE);
             }
             else Toast.makeText(getActivity(), getResources().getText(R.string.cantPlay), Toast.LENGTH_SHORT).show();
         }
