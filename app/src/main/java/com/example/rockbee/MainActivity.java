@@ -3,8 +3,10 @@ package com.example.rockbee;
 import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -25,12 +27,12 @@ import java.util.TreeMap;
 Так же следует проработать тот вариант, когда пользователь отказался давать разрешения.
 2)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
 3)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
-4)Не знаю, как менять цвет текста в табсах. Но здесь скорее ошибка - я.
-5)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
+4)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
 3)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
+4)Разобрать с аудиофокусом
  */
 
 public class MainActivity extends FragmentActivity {
@@ -171,6 +173,7 @@ public class MainActivity extends FragmentActivity {
         pf.changeColor(text);
         smf.changeColor(text);
         viewPager.setBackgroundColor(back);
+        tabs.setTabTextColors(text, text);
         tabs.setBackgroundColor(back);
         cf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
