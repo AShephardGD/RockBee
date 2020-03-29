@@ -75,7 +75,7 @@ public class MusicFragment extends Fragment {
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                cf.playMusic(playlist.get(position), playlist);
+                cf.playMusic(playlist.get(position), playlist, true);
                 resetTime();
             }
         });
@@ -87,7 +87,7 @@ public class MusicFragment extends Fragment {
                 playAllMusic(new Environment().getExternalStorageDirectory());
                 playlist.addAll(music.values());
                 try {
-                    cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                    cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
                     CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
                     nowPlays.setAdapter(adapter);
                 } catch (IndexOutOfBoundsException e){}
@@ -124,19 +124,19 @@ public class MusicFragment extends Fragment {
                              ps.setImageResource(R.drawable.ic_media_pause);
                              int index;
                              if (isRandom)
-                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
                              else {
                                  index = (playlist.indexOf(isPlaying) - 1);
                                  if (index < 0) index = playlist.size() - 1;
-                                 cf.playMusic(playlist.get(index), playlist);
+                                 cf.playMusic(playlist.get(index), playlist, true);
                              }
                              break;
                          case R.id.next:
                              ps.setImageResource(R.drawable.ic_media_pause);
                              if (isRandom)
-                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
                              else
-                                 cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist);
+                                 cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist, true);
                              break;
                          case R.id.ps:
                              if (mediaPlayer.isPlaying()) {

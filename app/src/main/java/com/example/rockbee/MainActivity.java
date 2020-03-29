@@ -1,11 +1,15 @@
 package com.example.rockbee;
 
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -16,23 +20,29 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static android.os.Environment.getExternalStorageDirectory;
+
 /*
 Список Ошибок:
 1)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
-2)Если перезайти в приложение, все состояние не сохранится: Плеер играет, но фрагмент показывает, что ничего не играет.
-3)Не дать доступ к памяти - музыкальный фрагмент жалуется на то, что переданный из mainActivity mediaplayer = null;
+2)Много ошибок, неизвестного производства, порой логкэт даже не пишет строчки в моем коде, а только приложение косячит.
+Короче работает через раз, а что делать с этим не знаю...
 Доделать:
 1)Серверную часть(обязательно)
 2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
 3)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
-4)Разобрать с аудиофокусом
+4)Разобрать с аудиофокусом(Необязательно)
  */
 
 public class MainActivity extends FragmentActivity {
+    private static final String CHANNEL_ID = "1";
     private MediaPlayer mediaPlayer;
     private FragmentManager fm;
     private SettingFragment sf = new SettingFragment(); //0
@@ -49,7 +59,11 @@ public class MainActivity extends FragmentActivity {
     private SectionsPagerAdapter sectionsPagerAdapter;
     private ViewPager viewPager;
     private TabLayout tabs;
-    private File root = new Environment().getExternalStorageDirectory();
+    private File isPlaying = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "a"),
+            root = getExternalStorageDirectory(),
+    playPath = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "b"),
+    playTime = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "c");
+    private ArrayList<File> wasPlayingPlaylist = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +74,29 @@ public class MainActivity extends FragmentActivity {
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_STORAGE);
         }
+        if(!isPlaying.exists()) {
+            try {
+                isPlaying.createNewFile();
+            } catch (IOException e) {
+                Log.e("error IOException: ", e.toString());
+            }
+        }
+        if(!playPath.exists()) {
+            try {
+                playPath.createNewFile();
+            } catch (IOException e) {
+                Log.e("error IOException: ", e.toString());
+            }
+        }
+        if(!playTime.exists()) {
+            try {
+                playTime.createNewFile();
+            } catch (IOException e) {
+                Log.e("error IOException: ", e.toString());
+            }
+        }
+        changeRun(false);
+        loadWasPlayingPlaylist();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mediaPlayer = new MediaPlayer();
@@ -70,8 +107,10 @@ public class MainActivity extends FragmentActivity {
         cf.setPlaylistFragment(pf);
         cf.setMusicFragment(mf);
         cf.setMediaPlayer(mediaPlayer);
+        cf.setThread(progress);
         progress.setMusicFragment(mf);
-        progress.start();
+        changeRun(true);
+        new Thread(progress).start();
         pf.setCatalogFragment(cf);
         pf.setMusicFragment(mf);
         sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, this);
@@ -83,6 +122,9 @@ public class MainActivity extends FragmentActivity {
         load();
         sf.setColorNum(color);
         cf.set(isRandom, isLooping);
+        wasPlaying();
+        createNotificationChannel();
+        clearTempFile();
     }
     public void onBackPressed(){
         num = viewPager.getCurrentItem();
@@ -91,7 +133,8 @@ public class MainActivity extends FragmentActivity {
         else finish();
     }
     public void save() {
-        int i = 0, j = 0;
+        wasPlayingPlaylist = new ArrayList<>(cf.getNowPlayingPlaylist());
+        int i = 0, j = 0, numbersOfSavedPlaylist = wasPlayingPlaylist.size(), a = 0;
         sPref = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
         playlists = new TreeMap<>(pf.getPlaylists());
@@ -104,6 +147,11 @@ public class MainActivity extends FragmentActivity {
             ed.putInt(Integer.toString(i), j);
             j = 0;
             i++;
+        }
+        ed.putInt("numbersOfSavedPlaylist", numbersOfSavedPlaylist);
+        for(File file: wasPlayingPlaylist) {
+            ed.putString("wasPlayingPlaylist" + a, file.getAbsolutePath());
+            a++;
         }
         ed.putInt("numbersOfPlaylists", i);
         ed.putBoolean("IsRandom", isRandom);
@@ -158,8 +206,7 @@ public class MainActivity extends FragmentActivity {
     protected void onDestroy() {
         super.onDestroy();
         save();
-        mediaPlayer.stop();
-        mediaPlayer.release();
+
     }
     public void applyChanges(int back, int text){
         isRandom = sf.getRan();
@@ -206,6 +253,79 @@ public class MainActivity extends FragmentActivity {
                             new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                             MY_PERMISSIONS_REQUEST_STORAGE);
                 }
+        }
+    }
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.app_name);
+            String description = getString(R.string.app_name);
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+    public void changeRun(boolean run){
+        try(FileWriter writer = new FileWriter(isPlaying, false))
+        {
+            writer.write("" + run);
+            writer.flush();
+        } catch(IOException ex){
+            Log.e("error IOException: ", ex.toString());
+        }
+    }
+    public void wasPlaying(){
+        try(FileReader reader = new FileReader(playPath))
+        {
+
+            String str = "";
+            int c;
+            while((c=reader.read())!=-1){
+                str += (char) c;
+            }
+            if(!str.equals("")) {
+                File f = new File(str);
+                cf.playMusic(f, wasPlayingPlaylist, false);
+            }
+        }
+        catch(IOException ex){
+            Log.e("error IOException: ", ex.toString());
+        }
+        mf.setPlaylist(wasPlayingPlaylist);
+        try(FileReader reader = new FileReader(playTime))
+        {
+            String str = "";
+            int c;
+            while((c=reader.read())!=-1){
+                str += (char) c;
+            }
+            if(!str.equals("")) cf.seekTo(Integer.parseInt(str));
+        }
+        catch(IOException ex){
+            Log.e("error IOException: ", ex.toString());
+        }
+    }
+    public void loadWasPlayingPlaylist(){
+        sPref = getPreferences(MODE_PRIVATE);
+        int i = sPref.getInt("numbersOfSavedPlaylist", 0);
+        wasPlayingPlaylist = new ArrayList<>();
+        for(int j = 0; j < i; j++)wasPlayingPlaylist.add(new File(sPref.getString("wasPlayingPlaylist" + j, "")));
+    }
+    public void clearTempFile(){
+        try(FileWriter writer = new FileWriter(playTime, false))
+        {
+            writer.write("");
+            writer.flush();
+        } catch(IOException ex){
+            Log.e("error IOException: ", ex.toString());
+        }
+        try(FileWriter writer = new FileWriter(playPath, false))
+        {
+            writer.write("");
+            writer.flush();
+        } catch(IOException ex){
+            Log.e("error IOException: ", ex.toString());
         }
     }
 }

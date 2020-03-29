@@ -61,7 +61,7 @@ public class PlaylistFragment extends Fragment {
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        cf.playMusic(tmpPlaylist.get(position), tmpPlaylist);
+                        cf.playMusic(tmpPlaylist.get(position), tmpPlaylist, true);
                         mf.setPlaylist(tmpPlaylist);
                     }
                 });
@@ -165,7 +165,7 @@ public class PlaylistFragment extends Fragment {
                     listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                            cf.playMusic(tmpPlaylist.get(position), tmpPlaylist);
+                            cf.playMusic(tmpPlaylist.get(position), tmpPlaylist, true);
                             mf.setPlaylist(tmpPlaylist);
                         }
                     });
