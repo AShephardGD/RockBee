@@ -2,25 +2,18 @@ package com.example.rockbee;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.RemoteViews;
-import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -28,7 +21,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
 
@@ -36,19 +28,14 @@ import static android.os.Environment.getExternalStorageDirectory;
 
 public class CatalogFragment extends Fragment {
     private File root = getExternalStorageDirectory(), parentDirectory = root, catalogForTemporaryMusic = new File(root.getAbsolutePath() + "/Temporary Music From RockBee");
-    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>(), nowPlayingPlaylist = new ArrayList<>();
+    private ArrayList<File> files = new ArrayList<>(), playlist = new ArrayList<>();
     private ListView cg;
-    private MediaPlayer mediaPlayer;
-    private boolean isRandom = false;
-    private int isLooping = 0;
-    private SeekBar seekBar;
     private MusicFragment mf;
     private PlaylistFragment pf;
     private int color;
     private FloatingActionButton back;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
-    private static final String CHANNEL_ID = "1";
-    private LookingForProgress thread;
+    private MediaPlayerService service;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.catalog, container, false);
@@ -123,8 +110,7 @@ public class CatalogFragment extends Fragment {
                     back.show();
                 }
                 else {
-                    playMusic(files.get(position), playlist, true);
-                    mf.setPlaylist(playlist);
+                    service.playMusic(files.get(position), playlist);
                 }
             }
         });
@@ -184,63 +170,6 @@ public class CatalogFragment extends Fragment {
             }
         });
     }
-
-    public void playMusic(final File file, ArrayList<File> newPlaylist, boolean sendNotif) {
-        try {
-            if(sendNotif) {
-                Intent intent = new Intent(getActivity(), MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                PendingIntent pendingIntent = PendingIntent.getActivity(getActivity(), 0, intent, 0);
-                RemoteViews notificationLayout = new RemoteViews(getActivity().getPackageName(), R.layout.notification_small);
-                notificationLayout.setTextViewText(R.id.ns_nowPlays, file.getName());
-                notificationLayout.setImageViewResource(R.id.ns_back, R.drawable.ic_media_previous);
-                notificationLayout.setImageViewResource(R.id.ns_ps, R.drawable.ic_media_pause);
-                notificationLayout.setImageViewResource(R.id.ns_next, R.drawable.ic_media_next);
-                NotificationCompat.Builder builder = new NotificationCompat.Builder(getActivity(), CHANNEL_ID)
-                        .setSmallIcon(R.drawable.bee)
-                        .setCustomContentView(notificationLayout)
-                        .setPriority(NotificationCompat.PRIORITY_MAX)
-                        .setContentIntent(pendingIntent)
-                        .setSound(null);
-                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getActivity());
-                notificationManager.notify(1, builder.build());
-            }
-            thread.setPlaying(file);
-            if(mf.getPS() != null) mf.getPS().setImageResource(R.drawable.ic_media_pause);
-            final ArrayList<File> nowPlays = new ArrayList<>(newPlaylist);
-            nowPlayingPlaylist = new ArrayList<>(newPlaylist);
-            mf.setIsPlaying(file);
-            mf.setName(file);
-            mediaPlayer.release();
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setAudioSessionId(1);
-            mediaPlayer.setDataSource(file.getPath());
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-            thread.setMediaPlayer(mediaPlayer);
-            seekBar = mf.getSeekBar();
-            mf.setMediaPlayer(mediaPlayer);
-            if(seekBar != null){
-                seekBar.setProgress(0);
-                seekBar.setMax(mediaPlayer.getDuration());
-                mf.resetTime();
-            }
-            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mp) {
-                    if(seekBar!= null) seekBar.setProgress(0);
-                    if (isRandom && (isLooping != 2)) playMusic(nowPlays.get((int) Math.round(Math.random() * (nowPlays.size() - 1))), nowPlays, true);
-                    else if ((isLooping == 1 || nowPlays.indexOf(file) + 1 != nowPlays.size()) && isLooping != 2)
-                        playMusic(nowPlays.get((nowPlays.indexOf(file) + 1) % nowPlays.size()), nowPlays, true);
-                    else if(isLooping == 2) playMusic(file, nowPlays, true);
-                }
-            });
-        } catch (IOException e) {
-            Toast.makeText(getActivity(), "Не воспроизводится!", Toast.LENGTH_LONG).show();
-            Log.d("er", e.toString());
-        }
-    }
-
     public void onBackPressed(){
         if(parentDirectory.equals(root)) getActivity().finish();
         else {
@@ -248,11 +177,6 @@ public class CatalogFragment extends Fragment {
             parentDirectory = parentDirectory.getParentFile();
             if(parentDirectory.equals(root)) back.hide();
         }
-    }
-    public void setMediaPlayer(MediaPlayer mp){mediaPlayer = mp;}
-    public void set(boolean ran, int loop){
-        isRandom = ran;
-        isLooping = loop;
     }
     public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
     public void setPlaylistFragment(PlaylistFragment fragment) {pf = fragment;}
@@ -263,8 +187,5 @@ public class CatalogFragment extends Fragment {
             cg.setAdapter(adapter); }
     }
     public ListView getCg(){return cg;}
-    public void setThread(LookingForProgress th){thread = th;}
-    public ArrayList<File> getNowPlayingPlaylist(){return nowPlayingPlaylist;}
-    public void seekTo(int i){mediaPlayer.seekTo(i);
-    }
+    public void setService(MediaPlayerService s){service = s;}
 }

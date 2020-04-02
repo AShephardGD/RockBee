@@ -54,4 +54,6 @@
     <string name="cantPlay">Не могу найти треков для воспроизведения</string>
     <string name="cantDelete">Не удалось удалить</string>
     <string name="nowPlays">Сейчас играет:</string>
+    <string name="cantConnect">Соединение не удалось</string>
+    <string name="tryAgain">Попытайтесь еще раз</string>
 </resources>

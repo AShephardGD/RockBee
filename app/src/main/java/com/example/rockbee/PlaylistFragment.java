@@ -29,6 +29,7 @@ public class PlaylistFragment extends Fragment {
     private int num = 0, color;
     private MusicFragment mf;
     private FloatingActionButton fab, back;
+    MediaPlayerService service;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         View view = inflater.inflate(R.layout.playlists, container, false);
@@ -61,7 +62,7 @@ public class PlaylistFragment extends Fragment {
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        cf.playMusic(tmpPlaylist.get(position), tmpPlaylist, true);
+                        service.playMusic(tmpPlaylist.get(position), tmpPlaylist);
                         mf.setPlaylist(tmpPlaylist);
                     }
                 });
@@ -165,7 +166,7 @@ public class PlaylistFragment extends Fragment {
                     listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                         @Override
                         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                            cf.playMusic(tmpPlaylist.get(position), tmpPlaylist, true);
+                            service.playMusic(tmpPlaylist.get(position), tmpPlaylist);
                             mf.setPlaylist(tmpPlaylist);
                         }
                     });
@@ -253,4 +254,5 @@ public class PlaylistFragment extends Fragment {
         else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
     }
     public void changeColor(int text) {color = text;}
+    public void setService(MediaPlayerService s){service = s;}
 }

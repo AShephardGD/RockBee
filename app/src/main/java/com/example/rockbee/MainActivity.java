@@ -1,14 +1,13 @@
 package com.example.rockbee;
 
 import android.Manifest;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
-import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.IBinder;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -20,9 +19,6 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,15 +38,13 @@ import static android.os.Environment.getExternalStorageDirectory;
  */
 
 public class MainActivity extends FragmentActivity {
-    private static final String CHANNEL_ID = "1";
-    private MediaPlayer mediaPlayer;
-    private FragmentManager fm;
+    private FragmentManager fm = getSupportFragmentManager();
     private SettingFragment sf = new SettingFragment(); //0
     private CatalogFragment cf = new CatalogFragment();//1
     private MusicFragment mf = new MusicFragment();//2
     private PlaylistFragment pf = new PlaylistFragment();//3
     private ServerMusicFragment smf = new ServerMusicFragment();//4
-    private int num = 1, isLooping = 0, color = 1;
+    private int isLooping = 0,  color = 1;
     private boolean isRandom = false;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
@@ -59,14 +53,14 @@ public class MainActivity extends FragmentActivity {
     private SectionsPagerAdapter sectionsPagerAdapter;
     private ViewPager viewPager;
     private TabLayout tabs;
-    private File isPlaying = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "a"),
-            root = getExternalStorageDirectory(),
-    playPath = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "b"),
-    playTime = new File(getExternalStorageDirectory().getAbsolutePath()+"/Temporary Music From RockBee", "c");
-    private ArrayList<File> wasPlayingPlaylist = new ArrayList<>();
+    private File root = getExternalStorageDirectory();
+    private MediaPlayerService service;
+    private ServiceConnection sConn;
+    private ArrayList<File> lastPlaylist = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        startService(new Intent(this, MediaPlayerService.class));
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -74,67 +68,50 @@ public class MainActivity extends FragmentActivity {
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_STORAGE);
         }
-        if(!isPlaying.exists()) {
-            try {
-                isPlaying.createNewFile();
-            } catch (IOException e) {
-                Log.e("error IOException: ", e.toString());
-            }
-        }
-        if(!playPath.exists()) {
-            try {
-                playPath.createNewFile();
-            } catch (IOException e) {
-                Log.e("error IOException: ", e.toString());
-            }
-        }
-        if(!playTime.exists()) {
-            try {
-                playTime.createNewFile();
-            } catch (IOException e) {
-                Log.e("error IOException: ", e.toString());
-            }
-        }
-        changeRun(false);
-        loadWasPlayingPlaylist();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mediaPlayer = new MediaPlayer();
-        fm = getSupportFragmentManager();
-        mf.setThread(progress);
-        mf.setMediaPlayer(mediaPlayer);
-        mf.setCatalogFragment(cf);
-        cf.setPlaylistFragment(pf);
-        cf.setMusicFragment(mf);
-        cf.setMediaPlayer(mediaPlayer);
-        cf.setThread(progress);
-        progress.setMusicFragment(mf);
-        changeRun(true);
-        new Thread(progress).start();
-        pf.setCatalogFragment(cf);
-        pf.setMusicFragment(mf);
-        sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, this);
-        viewPager = findViewById(R.id.view_pager);
-        viewPager.setAdapter(sectionsPagerAdapter);
-        tabs = findViewById(R.id.tabs);
-        tabs.setupWithViewPager(viewPager);
-        viewPager.setCurrentItem(1);
-        load();
-        sf.setColorNum(color);
-        cf.set(isRandom, isLooping);
-        wasPlaying();
-        createNotificationChannel();
-        clearTempFile();
+        sConn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                MainActivity.this.service = ((MediaPlayerService.MyBinder) service).getService();
+                MainActivity.this.service.setFragments(mf);
+                cf.setService(MainActivity.this.service);
+                mf.setService(MainActivity.this.service);
+                pf.setService(MainActivity.this.service);
+                sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, MainActivity.this);
+                viewPager = findViewById(R.id.view_pager);
+                tabs = findViewById(R.id.tabs);
+                load();
+                viewPager.setAdapter(sectionsPagerAdapter);
+                tabs.setupWithViewPager(viewPager);
+                progress.setMusicFragment(mf);
+                progress.start();
+                mf.setThread(progress);
+                mf.setCatalogFragment(cf);
+                cf.setPlaylistFragment(pf);
+                cf.setMusicFragment(mf);
+                pf.setCatalogFragment(cf);
+                pf.setMusicFragment(mf);
+                viewPager.setCurrentItem(1);
+                mf.setIsPlaying(MainActivity.this.service.getNowPlaying());
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                Toast.makeText(MainActivity.this, getResources().getText(R.string.cantConnect), Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        };
+        bindService(new Intent(this, MediaPlayerService.class), sConn, 0);
     }
     public void onBackPressed(){
-        num = viewPager.getCurrentItem();
+        int num = viewPager.getCurrentItem();
         if(num == 1) cf.onBackPressed();
         else if(num == 3) pf.onBackPressed();
         else finish();
     }
     public void save() {
-        wasPlayingPlaylist = new ArrayList<>(cf.getNowPlayingPlaylist());
-        int i = 0, j = 0, numbersOfSavedPlaylist = wasPlayingPlaylist.size(), a = 0;
+        int i = 0, j = 0;
         sPref = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
         playlists = new TreeMap<>(pf.getPlaylists());
@@ -148,24 +125,23 @@ public class MainActivity extends FragmentActivity {
             j = 0;
             i++;
         }
-        ed.putInt("numbersOfSavedPlaylist", numbersOfSavedPlaylist);
-        for(File file: wasPlayingPlaylist) {
-            ed.putString("wasPlayingPlaylist" + a, file.getAbsolutePath());
-            a++;
-        }
         ed.putInt("numbersOfPlaylists", i);
         ed.putBoolean("IsRandom", isRandom);
         ed.putInt("IsLooping", isLooping);
         ed.putInt("color", color);
+        lastPlaylist = new ArrayList<>(mf.getPlaylist());
+        int len = lastPlaylist.size();
+        for(int a = 0; a < len; a++)ed.putString("lastPlaylist" + a, lastPlaylist.get(a).getAbsolutePath());
+        ed.putInt("lenLastPlaylist", len);
         ed.apply();
     }
     public void load() {
+        sPref = getPreferences(MODE_PRIVATE);
         String name;
-        int len;
+        int len, i = sPref.getInt("numbersOfPlaylists", 0);
+        color = sPref.getInt("color", 0);
         ArrayList<File> songs;
         playlists = new TreeMap<>();
-        sPref = getPreferences(MODE_PRIVATE);
-        int i = sPref.getInt("numbersOfPlaylists", 0);
         for(int it = 0; it < i; it++) {
             name = sPref.getString(it + "name", "");
             len = sPref.getInt(Integer.toString(it), 0);
@@ -177,10 +153,10 @@ public class MainActivity extends FragmentActivity {
         pf.setPlaylists(playlists);
         isRandom = sPref.getBoolean("IsRandom", false);
         isLooping = sPref.getInt("IsLooping", 0);
-        cf.set(isRandom, isLooping);
         sf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
-        color = sPref.getInt("color", 1);
+        sf.setColorNum(color);
+        Toast.makeText(this, isLooping + "  " + isRandom +  "  " + sPref.getInt("color", 0), Toast.LENGTH_SHORT).show();
         if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
         else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
         else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
@@ -201,12 +177,20 @@ public class MainActivity extends FragmentActivity {
         else if(color == 17) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
         else if(color == 18) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
         else if(color == 19) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
+        len = sPref.getInt("lenLastPlaylist", 0);
+        for(int it = 0; it < len; it++){
+            lastPlaylist.add(new File(sPref.getString("lastPlaylist" + it, "")));
+        }
+        service.setIsLooping(isLooping);
+        service.setRandom(isRandom);
+        mf.setPlaylist(lastPlaylist);
     }
     @Override
     protected void onDestroy() {
+        unbindService(sConn);
         super.onDestroy();
         save();
-
+        progress.interrupt();
     }
     public void applyChanges(int back, int text){
         isRandom = sf.getRan();
@@ -219,8 +203,9 @@ public class MainActivity extends FragmentActivity {
         viewPager.setBackgroundColor(back);
         tabs.setTabTextColors(text, text);
         tabs.setBackgroundColor(back);
-        cf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
+        service.setIsLooping(isLooping);
+        service.setRandom(isRandom);
     }
 
     public void setNewPlaylistName(String s){
@@ -237,6 +222,7 @@ public class MainActivity extends FragmentActivity {
         sf.setColor(text);
         viewPager.setBackgroundColor(back);
         tabs.setBackgroundColor(back);
+        tabs.setTabTextColors(text, text);
     }
     public void newPlaylist(){
         NewPlaylistDialog newPlaylistDialog = new NewPlaylistDialog();
@@ -253,79 +239,6 @@ public class MainActivity extends FragmentActivity {
                             new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                             MY_PERMISSIONS_REQUEST_STORAGE);
                 }
-        }
-    }
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = getString(R.string.app_name);
-            String description = getString(R.string.app_name);
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(description);
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-    public void changeRun(boolean run){
-        try(FileWriter writer = new FileWriter(isPlaying, false))
-        {
-            writer.write("" + run);
-            writer.flush();
-        } catch(IOException ex){
-            Log.e("error IOException: ", ex.toString());
-        }
-    }
-    public void wasPlaying(){
-        try(FileReader reader = new FileReader(playPath))
-        {
-
-            String str = "";
-            int c;
-            while((c=reader.read())!=-1){
-                str += (char) c;
-            }
-            if(!str.equals("")) {
-                File f = new File(str);
-                cf.playMusic(f, wasPlayingPlaylist, false);
-            }
-        }
-        catch(IOException ex){
-            Log.e("error IOException: ", ex.toString());
-        }
-        mf.setPlaylist(wasPlayingPlaylist);
-        try(FileReader reader = new FileReader(playTime))
-        {
-            String str = "";
-            int c;
-            while((c=reader.read())!=-1){
-                str += (char) c;
-            }
-            if(!str.equals("")) cf.seekTo(Integer.parseInt(str));
-        }
-        catch(IOException ex){
-            Log.e("error IOException: ", ex.toString());
-        }
-    }
-    public void loadWasPlayingPlaylist(){
-        sPref = getPreferences(MODE_PRIVATE);
-        int i = sPref.getInt("numbersOfSavedPlaylist", 0);
-        wasPlayingPlaylist = new ArrayList<>();
-        for(int j = 0; j < i; j++)wasPlayingPlaylist.add(new File(sPref.getString("wasPlayingPlaylist" + j, "")));
-    }
-    public void clearTempFile(){
-        try(FileWriter writer = new FileWriter(playTime, false))
-        {
-            writer.write("");
-            writer.flush();
-        } catch(IOException ex){
-            Log.e("error IOException: ", ex.toString());
-        }
-        try(FileWriter writer = new FileWriter(playPath, false))
-        {
-            writer.write("");
-            writer.flush();
-        } catch(IOException ex){
-            Log.e("error IOException: ", ex.toString());
         }
     }
 }

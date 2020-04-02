@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +30,6 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 public class MusicFragment extends Fragment {
-    private MediaPlayer mediaPlayer;
     private ImageView prev, next, ps, back, forward;
     private ArrayList<File> playlist = new ArrayList<>();
     private ListView nowPlays;
@@ -43,6 +43,7 @@ public class MusicFragment extends Fragment {
     private FloatingActionButton fab;
     private TreeMap<String, File> music;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
+    private MediaPlayerService service;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -58,24 +59,24 @@ public class MusicFragment extends Fragment {
         time = view.findViewById(R.id.time);
         prev.setImageResource(R.drawable.ic_media_previous);
         next.setImageResource(R.drawable.ic_media_next);
-        if(mediaPlayer.isPlaying())ps.setImageResource(R.drawable.ic_media_pause);
-        else ps.setImageResource(R.drawable.ic_media_play);
         back.setImageResource(R.drawable.ic_media_rew);
         forward.setImageResource(R.drawable.ic_media_ff);
         resetTime();
         time.setTextColor(color);
         name.setTextColor(color);
+        if(service.isPlaying())ps.setImageResource(R.drawable.ic_media_pause);
+        else ps.setImageResource(R.drawable.ic_media_play);
+        seekBar.setMax(service.getDuration());
+        seekBar.setProgress(service.getCurrentPosition());
         if(isPlaying != null) name.setText(isPlaying.getName());
         else name.setText(getResources().getText(R.string.emptyPlaylist));
-        seekBar.setMax(mediaPlayer.getDuration());
-        seekBar.setProgress(mediaPlayer.getCurrentPosition());
         nowPlays = view.findViewById(R.id.MusicListView);
         CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
         nowPlays.setAdapter(adapter);
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                cf.playMusic(playlist.get(position), playlist, true);
+                service.playMusic(playlist.get(position), playlist);
                 resetTime();
             }
         });
@@ -87,7 +88,7 @@ public class MusicFragment extends Fragment {
                 playAllMusic(new Environment().getExternalStorageDirectory());
                 playlist.addAll(music.values());
                 try {
-                    cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
+                    service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
                     CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
                     nowPlays.setAdapter(adapter);
                 } catch (IndexOutOfBoundsException e){}
@@ -123,39 +124,36 @@ public class MusicFragment extends Fragment {
                          case R.id.prev:
                              ps.setImageResource(R.drawable.ic_media_pause);
                              int index;
-                             if (isRandom)
-                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
+                             if (isRandom)service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
                              else {
                                  index = (playlist.indexOf(isPlaying) - 1);
                                  if (index < 0) index = playlist.size() - 1;
-                                 cf.playMusic(playlist.get(index), playlist, true);
+                                 service.playMusic(playlist.get(index), playlist);
                              }
                              break;
                          case R.id.next:
                              ps.setImageResource(R.drawable.ic_media_pause);
-                             if (isRandom)
-                                 cf.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist, true);
-                             else
-                                 cf.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist, true);
+                             if (isRandom)service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                             else service.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist);
                              break;
                          case R.id.ps:
-                             if (mediaPlayer.isPlaying()) {
+                             if (service.isPlaying()) {
                                  ps.setImageResource(R.drawable.ic_media_play);
-                                 mediaPlayer.pause();
+                                 service.pause();
                              } else {
                                  ps.setImageResource(R.drawable.ic_media_pause);
-                                 mediaPlayer.start();
+                                 service.play();
                              }
                              break;
                          case R.id.back:
-                             delta = mediaPlayer.getCurrentPosition() - 10000;
-                             if (delta > 0) mediaPlayer.seekTo(delta);
-                             else mediaPlayer.seekTo(0);
+                             delta = service.getCurrentPosition() - 10000;
+                             if (delta > 0) service.seekTo(delta);
+                             else service.seekTo(0);
                              break;
                          case R.id.forward:
-                             delta = mediaPlayer.getCurrentPosition() + 10000;
-                             if (delta < mediaPlayer.getDuration()) mediaPlayer.seekTo(delta);
-                             else mediaPlayer.seekTo(mediaPlayer.getDuration() - 1);
+                             delta = service.getCurrentPosition() + 10000;
+                             if (delta < service.getDuration()) service.seekTo(delta);
+                             else service.seekTo(service.getDuration() - 1);
                              break;
                          default:
                              break;
@@ -176,7 +174,7 @@ public class MusicFragment extends Fragment {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                mediaPlayer.seekTo(seekBar.getProgress());
+                service.seekTo(seekBar.getProgress());
                 resetTime();
                 progress.changeMode();
             }
@@ -188,9 +186,6 @@ public class MusicFragment extends Fragment {
         back.setOnClickListener(listener);
         return view;
     }
-    public void setMediaPlayer(MediaPlayer mp) {
-        mediaPlayer = mp;
-    }
     public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
     public void setPlaylist(ArrayList<File> play) {
         playlist = new ArrayList<>(play);
@@ -199,27 +194,29 @@ public class MusicFragment extends Fragment {
             nowPlays.setAdapter(adapter);
         }
     }
-    public SeekBar getSeekBar(){return seekBar;}
     public void resetTime(){
-        sec = (mediaPlayer.getDuration() / 1000) % 60;
-        min = mediaPlayer.getDuration() / 60000;
-        nowSec = (mediaPlayer.getCurrentPosition() / 1000) % 60;
-        nowMin = mediaPlayer.getCurrentPosition() / 60000;
+        int now = service.getCurrentPosition(), max = service.getDuration();
+        sec = (max / 1000) % 60;
+        min =  max / 60000;
+        nowSec = (now / 1000) % 60;
+        nowMin = now / 60000;
         try {
             if (nowSec / 10 == 0 && sec / 10 == 0)
                 time.setText(nowMin + ":0" + nowSec + "/" + min + ":0" + sec);
             else if (sec / 10 == 0) time.setText(nowMin + ":" + nowSec + "/" + min + ":0" + sec);
             else if (nowSec / 10 == 0) time.setText(nowMin + ":0" + nowSec + "/" + min + ":" + sec);
             else time.setText(nowMin + ":" + nowSec + "/" + min + ":" + sec);
-            seekBar.setProgress(mediaPlayer.getCurrentPosition());
+            seekBar.setProgress(now);
 
-        } catch (NullPointerException e) {}
+        } catch (NullPointerException e) {
+            Log.e("MusicFragment", "resetTime:" + e.toString());
+        }
     }
     public void setThread(LookingForProgress thread) {progress = thread;}
     public void setIsRandom(boolean random) {isRandom = random;}
     public void setIsPlaying(File play) {isPlaying = play;}
     public void setName(File file){
-        if(name != null) name.setText(file.getName());
+        if(name != null && file != null) name.setText(file.getName());
     }
     public ImageView getPS(){return ps;}
     public void addNewSongToNowPlays(File file){
@@ -258,6 +255,13 @@ public class MusicFragment extends Fragment {
                         MY_PERMISSIONS_REQUEST_STORAGE);
             }
             else Toast.makeText(getActivity(), getResources().getText(R.string.cantPlay), Toast.LENGTH_SHORT).show();
+        }
+    }
+    public void setService(MediaPlayerService s){service = s;}
+    public void setMax(){
+        if(seekBar != null) {
+            seekBar.setProgress(0);
+            seekBar.setMax(service.getDuration());
         }
     }
 }
