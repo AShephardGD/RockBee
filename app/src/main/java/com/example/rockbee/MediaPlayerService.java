@@ -77,11 +77,8 @@ public class MediaPlayerService extends Service {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    Log.e("music ended", nowPlaying.getAbsolutePath());
-                    if (isRandom && (isLooping != 2))
-                        playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                    else if ((isLooping == 1 || playlist.indexOf(nowPlaying) + 1 != playlist.size()) && isLooping != 2)
-                        playMusic(playlist.get((playlist.indexOf(nowPlaying) + 1) % playlist.size()), playlist);
+                    if (isRandom && (isLooping != 2)) playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                    else if ((isLooping == 1 || playlist.indexOf(nowPlaying) + 1 != playlist.size()) && isLooping != 2) playMusic(playlist.get((playlist.indexOf(nowPlaying) + 1) % playlist.size()), playlist);
                     else if (isLooping == 2) playMusic(nowPlaying, playlist);
                     else mf.setPlay();
                 }
@@ -91,17 +88,22 @@ public class MediaPlayerService extends Service {
             refresh(currentState);
             mf.setPause();
             mf.setMax();
-            mf.resetTime();
         }
 
         @Override
         public void onPause() {
+            audioFocus = false;
             mediaPlayer.pause();
             unregisterReceiver(becomingNoisyReceiver);
             mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
             currentState = PlaybackStateCompat.STATE_PAUSED;
             refresh(currentState);
             mf.setPlay();
+        }
+
+        @Override
+        public void onStop() {
+            stopSelf();
         }
 
         @Override
@@ -140,11 +142,11 @@ public class MediaPlayerService extends Service {
                     if(!mediaPlayer.isPlaying()) mediaSessionCallback.onPlay();
                     mediaPlayer.setVolume(1.0f, 1.0f);
                     break;
-                case AudioManager.AUDIOFOCUS_LOSS:
-                    mediaSessionCallback.onPause();
+                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                    mediaPlayer.setVolume(0.3f, 0.3f);
                     break;
                 default:
-                    mediaPlayer.setVolume(0.3f, 0.3f);
+                    mediaSessionCallback.onPause();
             }
         }
     };
@@ -258,13 +260,6 @@ public class MediaPlayerService extends Service {
     public int getDuration(){return mediaPlayer.getDuration();}
     public int getCurrentPosition(){return mediaPlayer.getCurrentPosition();}
     public void seekTo(int i){mediaPlayer.seekTo(i);}
-    @Override
-    public boolean onUnbind(Intent intent) {
-        if(!mediaPlayer.isPlaying()){
-            stopSelf();
-        }
-        return super.onUnbind(intent);
-    }
     public File getNowPlaying(){return nowPlaying;}
     public void setFragments(MusicFragment f){mf = f;}
     public void refresh(int playbackState){

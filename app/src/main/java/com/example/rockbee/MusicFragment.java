@@ -61,7 +61,7 @@ public class MusicFragment extends Fragment {
         next.setImageResource(R.drawable.ic_media_next);
         back.setImageResource(R.drawable.ic_media_rew);
         forward.setImageResource(R.drawable.ic_media_ff);
-        resetTime();
+        max = service.getDuration();
         time.setTextColor(color);
         name.setTextColor(color);
         if(service.isPlaying())ps.setImageResource(R.drawable.ic_media_pause);
@@ -77,7 +77,6 @@ public class MusicFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 service.playMusic(playlist.get(position), playlist);
-                resetTime();
             }
         });
         fab.setOnClickListener(new View.OnClickListener() {
@@ -173,11 +172,13 @@ public class MusicFragment extends Fragment {
     }
     public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
     public void setPlaylist(ArrayList<File> play) {
-        playlist = new ArrayList<>(play);
-        if(nowPlays != null){
-            CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-            nowPlays.setAdapter(adapter);
-        }
+        try {
+            playlist = new ArrayList<>(play);
+            if (nowPlays != null) {
+                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                nowPlays.setAdapter(adapter);
+            }
+        } catch(IllegalStateException e){}
     }
     public void resetTime(){
         int now = service.getCurrentPosition();

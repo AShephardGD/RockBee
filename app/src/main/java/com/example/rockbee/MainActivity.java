@@ -31,6 +31,7 @@ import static android.os.Environment.getExternalStorageDirectory;
 /*
 Список Ошибок:
 1)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
+(Возможно это возникает только из-за работы с андроид студио: останвливать активность на середине работы видно не очень складывается на ее способности работать потом.)
 Доделать:
 1)Серверную часть(обязательно)
 2)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
@@ -56,7 +57,6 @@ public class MainActivity extends FragmentActivity {
     private MediaPlayerService service;
     private ServiceConnection sConn;
     private ArrayList<File> lastPlaylist = new ArrayList<>();
-    private MediaPlayerService.MyBinder binder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +73,6 @@ public class MainActivity extends FragmentActivity {
         sConn = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
-                binder = (MediaPlayerService.MyBinder) service;
                 MainActivity.this.service = ((MediaPlayerService.MyBinder) service).getService();
                 MainActivity.this.service.setFragments(mf);
                 cf.setService(MainActivity.this.service);
@@ -161,21 +160,20 @@ public class MainActivity extends FragmentActivity {
         else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));
         else if(color == 3) changeColor(getResources().getColor(R.color.gray), getResources().getColor(R.color.pink));
         else if(color == 4) changeColor(getResources().getColor(R.color.greenLime), getResources().getColor(R.color.darkBrown));
-        else if(color == 5) changeColor(getResources().getColor(R.color.lightGreen), getResources().getColor(R.color.red));
-        else if(color == 6) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
-        else if(color == 7) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
-        else if(color == 8) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
-        else if(color == 9) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
-        else if(color == 10) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
-        else if(color == 11) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
-        else if(color == 12) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
-        else if(color == 13) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
-        else if(color == 14) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
-        else if(color == 15) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
-        else if(color == 16) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
-        else if(color == 17) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
-        else if(color == 18) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
-        else if(color == 19) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
+        else if(color == 5) changeColor(getResources().getColor(R.color.cherryRed), getResources().getColor(R.color.lightOrange));
+        else if(color == 6) changeColor(getResources().getColor(R.color.brown), getResources().getColor(R.color.veryLightBlue));
+        else if(color == 7) changeColor(getResources().getColor(R.color.darkBrown), getResources().getColor(R.color.yellow));
+        else if(color == 8) changeColor(getResources().getColor(R.color.orange), getResources().getColor(R.color.blue));
+        else if(color == 9) changeColor(getResources().getColor(R.color.lightOrange), getResources().getColor(R.color.brown));
+        else if(color == 10) changeColor(getResources().getColor(R.color.darkOrange), getResources().getColor(R.color.paleYellow));
+        else if(color == 11) changeColor(getResources().getColor(R.color.paleYellow), getResources().getColor(R.color.red));
+        else if(color == 12) changeColor(getResources().getColor(R.color.goldYellow), getResources().getColor(R.color.azure));
+        else if(color == 13) changeColor(getResources().getColor(R.color.turquoise), getResources().getColor(R.color.darkPurple));
+        else if(color == 14) changeColor(getResources().getColor(R.color.electrician), getResources().getColor(R.color.goldYellow));
+        else if(color == 15) changeColor(getResources().getColor(R.color.darkBlue), getResources().getColor(R.color.yellowGreen));
+        else if(color == 16) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
+        else if(color == 17) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
+        else if(color == 18) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
         len = sPref.getInt("lenLastPlaylist", 0);
         for(int it = 0; it < len; it++){
             lastPlaylist.add(new File(sPref.getString("lastPlaylist" + it, "")));
