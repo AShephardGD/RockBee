@@ -36,7 +36,7 @@ public class MusicFragment extends Fragment {
     private SeekBar seekBar = null;
     private CatalogFragment cf;
     private TextView time, name;
-    private int nowSec, nowMin, min, sec, color;
+    private int nowSec, nowMin, min, sec, color, max;
     private boolean isRandom;
     private LookingForProgress progress;
     private File isPlaying = null;
@@ -68,7 +68,7 @@ public class MusicFragment extends Fragment {
         else ps.setImageResource(R.drawable.ic_media_play);
         seekBar.setMax(service.getDuration());
         seekBar.setProgress(service.getCurrentPosition());
-        if(isPlaying != null) name.setText(isPlaying.getName());
+        if(isPlaying != null) setIsPlaying(isPlaying);
         else name.setText(getResources().getText(R.string.emptyPlaylist));
         nowPlays = view.findViewById(R.id.MusicListView);
         CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
@@ -122,28 +122,14 @@ public class MusicFragment extends Fragment {
                 if(isPlaying != null) {
                      switch (v.getId()) {
                          case R.id.prev:
-                             ps.setImageResource(R.drawable.ic_media_pause);
-                             int index;
-                             if (isRandom)service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                             else {
-                                 index = (playlist.indexOf(isPlaying) - 1);
-                                 if (index < 0) index = playlist.size() - 1;
-                                 service.playMusic(playlist.get(index), playlist);
-                             }
+                             service.prev();
                              break;
                          case R.id.next:
-                             ps.setImageResource(R.drawable.ic_media_pause);
-                             if (isRandom)service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                             else service.playMusic(playlist.get((playlist.indexOf(isPlaying) + 1) % playlist.size()), playlist);
+                             service.next();
                              break;
                          case R.id.ps:
-                             if (service.isPlaying()) {
-                                 ps.setImageResource(R.drawable.ic_media_play);
-                                 service.pause();
-                             } else {
-                                 ps.setImageResource(R.drawable.ic_media_pause);
-                                 service.play();
-                             }
+                             if (service.isPlaying())service.pause();
+                             else service.play();
                              break;
                          case R.id.back:
                              delta = service.getCurrentPosition() - 10000;
@@ -156,7 +142,6 @@ public class MusicFragment extends Fragment {
                              else service.seekTo(service.getDuration() - 1);
                              break;
                          default:
-                             break;
                      }
                  }
             }
@@ -195,7 +180,7 @@ public class MusicFragment extends Fragment {
         }
     }
     public void resetTime(){
-        int now = service.getCurrentPosition(), max = service.getDuration();
+        int now = service.getCurrentPosition();
         sec = (max / 1000) % 60;
         min =  max / 60000;
         nowSec = (now / 1000) % 60;
@@ -207,18 +192,19 @@ public class MusicFragment extends Fragment {
             else if (nowSec / 10 == 0) time.setText(nowMin + ":0" + nowSec + "/" + min + ":" + sec);
             else time.setText(nowMin + ":" + nowSec + "/" + min + ":" + sec);
             seekBar.setProgress(now);
-
         } catch (NullPointerException e) {
             Log.e("MusicFragment", "resetTime:" + e.toString());
         }
     }
     public void setThread(LookingForProgress thread) {progress = thread;}
     public void setIsRandom(boolean random) {isRandom = random;}
-    public void setIsPlaying(File play) {isPlaying = play;}
-    public void setName(File file){
-        if(name != null && file != null) name.setText(file.getName());
+    public void setIsPlaying(File play) {
+        isPlaying = play;
+        if(isPlaying != null) {
+            String songName = play.getName();
+            if (name != null) name.setText(songName.substring(0, songName.lastIndexOf(".")));
+        }
     }
-    public ImageView getPS(){return ps;}
     public void addNewSongToNowPlays(File file){
         playlist.add(file);
         if(nowPlays != null){
@@ -263,5 +249,8 @@ public class MusicFragment extends Fragment {
             seekBar.setProgress(0);
             seekBar.setMax(service.getDuration());
         }
+        max = service.getDuration();
     }
+    public void setPlay(){if(ps != null) ps.setImageResource(R.drawable.ic_media_play);}
+    public void setPause(){if(ps != null) ps.setImageResource(R.drawable.ic_media_pause);}
 }

@@ -8,6 +8,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -28,13 +31,9 @@ import static android.os.Environment.getExternalStorageDirectory;
 /*
 Список Ошибок:
 1)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
-2)Много ошибок, неизвестного производства, порой логкэт даже не пишет строчки в моем коде, а только приложение косячит.
-Короче работает через раз, а что делать с этим не знаю...
 Доделать:
 1)Серверную часть(обязательно)
-2)Вывод в уведомления(Чтобы пользователь мог управлять воспроизведением вне приложения)
-3)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
-4)Разобрать с аудиофокусом(Необязательно)
+2)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
  */
 
 public class MainActivity extends FragmentActivity {
@@ -57,6 +56,7 @@ public class MainActivity extends FragmentActivity {
     private MediaPlayerService service;
     private ServiceConnection sConn;
     private ArrayList<File> lastPlaylist = new ArrayList<>();
+    private MediaPlayerService.MyBinder binder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +73,7 @@ public class MainActivity extends FragmentActivity {
         sConn = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
+                binder = (MediaPlayerService.MyBinder) service;
                 MainActivity.this.service = ((MediaPlayerService.MyBinder) service).getService();
                 MainActivity.this.service.setFragments(mf);
                 cf.setService(MainActivity.this.service);
@@ -95,14 +96,13 @@ public class MainActivity extends FragmentActivity {
                 viewPager.setCurrentItem(1);
                 mf.setIsPlaying(MainActivity.this.service.getNowPlaying());
             }
-
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 Toast.makeText(MainActivity.this, getResources().getText(R.string.cantConnect), Toast.LENGTH_SHORT).show();
                 finish();
             }
         };
-        bindService(new Intent(this, MediaPlayerService.class), sConn, 0);
+        bindService(new Intent(this, MediaPlayerService.class), sConn, BIND_AUTO_CREATE);
     }
     public void onBackPressed(){
         int num = viewPager.getCurrentItem();
@@ -156,7 +156,6 @@ public class MainActivity extends FragmentActivity {
         sf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
         sf.setColorNum(color);
-        Toast.makeText(this, isLooping + "  " + isRandom +  "  " + sPref.getInt("color", 0), Toast.LENGTH_SHORT).show();
         if(color == 0)changeColor(getResources().getColor(R.color.white), getResources().getColor(R.color.black));
         else if(color == 1) changeColor(getResources().getColor(R.color.black), getResources().getColor(R.color.white));
         else if(color == 2) changeColor(getResources().getColor(R.color.beige), getResources().getColor(R.color.emerald));

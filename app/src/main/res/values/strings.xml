@@ -56,4 +56,8 @@
     <string name="nowPlays">Сейчас играет:</string>
     <string name="cantConnect">Соединение не удалось</string>
     <string name="tryAgain">Попытайтесь еще раз</string>
+    <string name="prev">Предыдущий трек</string>
+    <string name="next">Следующий трек</string>
+    <string name="play">Воспроизводить</string>
+    <string name="pause">Приостановить</string>
 </resources>

@@ -27,16 +27,18 @@ public class CatalogAdapter extends ArrayAdapter<File> {
         if(convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.files, null);
         }
-        ((TextView) convertView.findViewById(R.id.fileName)).setText(file.getName());
+        String name = file.getName();
         ((TextView) convertView.findViewById(R.id.fileName)).setTextColor(color);
         if(file.isFile()) {
             ((ImageView) convertView.findViewById(R.id.fileOrDirectory)).setImageResource(R.drawable.note);
             (convertView.findViewById(R.id.nums)).setVisibility(View.GONE);
+            ((TextView) convertView.findViewById(R.id.fileName)).setText(name.substring(0, name.lastIndexOf(".")));
         }
         else {
             ((ImageView) convertView.findViewById(R.id.fileOrDirectory)).setImageResource(R.drawable.directory);
             ((TextView) convertView.findViewById(R.id.nums)).setText(nums + ": " + file.listFiles().length);
             ((TextView) convertView.findViewById(R.id.nums)).setTextColor(color);
+            ((TextView) convertView.findViewById(R.id.fileName)).setText(file.getName());
         }
         return convertView;
     }
