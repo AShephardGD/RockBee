@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    >
+
+    <Switch
+        android:id="@+id/myDelete"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/deleteAfterEnd"
+        app:layout_constraintBottom_toTopOf="@+id/myPassButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/myTracks" />
+
+    <Button
+        android:id="@+id/closeTheRoom"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/deleteRoom"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/myPass"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/against"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/myTracks"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ListView
+        android:id="@+id/myTracks"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/myDelete"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/myPass">
+
+    </ListView>
+
+    <Button
+        android:id="@+id/myUserList"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/listUsers"
+        app:layout_constraintBottom_toTopOf="@+id/closeTheRoom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/myPassButton" />
+
+    <Button
+        android:id="@+id/myPassButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/pass"
+        app:layout_constraintBottom_toTopOf="@+id/myUserList"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/myDelete" />
+</androidx.constraintlayout.widget.ConstraintLayout>

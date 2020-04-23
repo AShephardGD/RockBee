@@ -60,4 +60,26 @@
     <string name="next">Следующий трек</string>
     <string name="play">Воспроизводить</string>
     <string name="pause">Приостановить</string>
+    <string name="enterName">Введите Ваше имя</string>
+    <string name="noName">Вы не написали Ваше имя</string>
+    <string name="name">Имя: </string>
+    <string name="noInternet">Нет подключения к интернету</string>
+    <string name="ready">Готово</string>
+    <string name="whyNeedName">Введите имя, по которому Ваши друзья смогу найти Вас</string>
+    <string name="createMy">Создать комнату</string>
+    <string name="foundFriend">Найти комнату друга</string>
+    <string name="changeName">Сменить имя</string>
+    <string name="ok">Окей</string>
+    <string name="deleteAfterEnd">Удалять треки после отключения от комнаты</string>
+    <string name="listUsers">Список участников</string>
+    <string name="deleteRoom">Закрыть комнату</string>
+    <string name="numbersOfUsers">Количество участников: </string>
+    <string name="against">Пропуск: </string>
+    <string name="off">Отключиться от комнаты</string>
+    <string name="playToo">Воспроизводить треки из списка</string>
+    <string name="pass">Пропустить трек</string>
+    <string name="findByNameOrUUID">Найти по имени или UUID</string>
+    <string name="enterData">Введите данные</string>
+    <string name="loadingCatalog">Сканирую каталог, пожалуйста подождите</string>
+    <string name="loadingCatalogComplete">Сканирование завершено</string>
 </resources>

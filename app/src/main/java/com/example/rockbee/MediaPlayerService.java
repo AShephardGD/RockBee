@@ -77,7 +77,7 @@ public class MediaPlayerService extends Service {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    if (isRandom && (isLooping != 2)) playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                    if (isRandom && isLooping != 2) playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
                     else if ((isLooping == 1 || playlist.indexOf(nowPlaying) + 1 != playlist.size()) && isLooping != 2) playMusic(playlist.get((playlist.indexOf(nowPlaying) + 1) % playlist.size()), playlist);
                     else if (isLooping == 2) playMusic(nowPlaying, playlist);
                     else mf.setPlay();
@@ -94,7 +94,6 @@ public class MediaPlayerService extends Service {
         public void onPause() {
             audioFocus = false;
             mediaPlayer.pause();
-            unregisterReceiver(becomingNoisyReceiver);
             mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
             currentState = PlaybackStateCompat.STATE_PAUSED;
             refresh(currentState);
@@ -103,12 +102,15 @@ public class MediaPlayerService extends Service {
 
         @Override
         public void onStop() {
+            mediaSession.setActive(false);
+            unregisterReceiver(becomingNoisyReceiver);
+            stopForeground(true);
             stopSelf();
         }
 
         @Override
         public void onSkipToNext() {
-            if (isRandom) nowPlaying = playlist.get((int) Math.round(Math.random() * (playlist.size() - 1)));
+            if (isRandom && isLooping != 2) nowPlaying = playlist.get((int) Math.round(Math.random() * (playlist.size() - 1)));
             else nowPlaying = playlist.get((playlist.indexOf(nowPlaying) + 1) % playlist.size());
             MediaPlayerService.this.playMusic(nowPlaying, playlist);
         }
@@ -116,7 +118,7 @@ public class MediaPlayerService extends Service {
         @Override
         public void onSkipToPrevious() {
             int index;
-            if (isRandom) nowPlaying = playlist.get((int) Math.round(Math.random() * (playlist.size() - 1)));
+            if (isRandom && isLooping != 2) nowPlaying = playlist.get((int) Math.round(Math.random() * (playlist.size() - 1)));
             else {
                 index = (playlist.indexOf(nowPlaying) - 1);
                 if (index < 0) index = playlist.size() - 1;
@@ -163,6 +165,7 @@ public class MediaPlayerService extends Service {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             @SuppressLint("WrongConstant") NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_DEFAULT_CHANNEL_ID, "Player controls", NotificationManagerCompat.IMPORTANCE_LOW);
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationChannel.setShowBadge(false);
             notificationManager.createNotificationChannel(notificationChannel);
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -190,6 +193,7 @@ public class MediaPlayerService extends Service {
 
     @Override
     public void onDestroy() {
+        stopForeground(true);
         mediaPlayer.stop();
         mediaPlayer.release();
         mediaSession.release();
@@ -258,7 +262,13 @@ public class MediaPlayerService extends Service {
         }
     }
     public int getDuration(){return mediaPlayer.getDuration();}
-    public int getCurrentPosition(){return mediaPlayer.getCurrentPosition();}
+    public int getCurrentPosition() {
+        try {
+            return mediaPlayer.getCurrentPosition();
+        } catch (IllegalStateException e) {
+            return 0;
+        }
+    }
     public void seekTo(int i){mediaPlayer.seekTo(i);}
     public File getNowPlaying(){return nowPlaying;}
     public void setFragments(MusicFragment f){mf = f;}

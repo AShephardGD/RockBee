@@ -40,6 +40,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
+                android:autoSizeTextType="none"
                 android:text="@string/isRandom"
                 android:textSize="18sp" />
 

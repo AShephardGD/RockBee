@@ -21,7 +21,7 @@ public class SettingFragment extends Fragment {
     private RadioButton[] radioButtons = new RadioButton[19];
     private int colorNum = 0, color;
     private TextView tw1, tw2;
-    private FloatingActionButton fab;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.settings, container, false);
@@ -31,7 +31,7 @@ public class SettingFragment extends Fragment {
         loop2 = view.findViewById(R.id.loop2);
         tw1 = view.findViewById(R.id.textView);
         tw2 = view.findViewById(R.id.textView2);
-        fab = view.findViewById(R.id.fab2);
+        FloatingActionButton fab = view.findViewById(R.id.fab2);
         radioButtons[0] = view.findViewById(R.id.radioButton);
         radioButtons[1] = view.findViewById(R.id.radioButton2);
         radioButtons[2] = view.findViewById(R.id.radioButton3);

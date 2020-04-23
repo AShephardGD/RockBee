@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/friendPass"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/against"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@id/friendTracks"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ListView
+        android:id="@+id/friendTracks"
+        android:layout_width="409dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/playButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/friendPass" />
+
+    <Button
+        android:id="@+id/friendPassButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/pass"
+        app:layout_constraintBottom_toTopOf="@+id/friendUserList"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/friendDelete" />
+
+    <Button
+        android:id="@+id/friendUserList"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/listUsers"
+        app:layout_constraintBottom_toTopOf="@+id/leave"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/friendPassButton" />
+
+    <Button
+        android:id="@+id/leave"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/off"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/friendUserList" />
+
+    <Switch
+        android:id="@+id/playButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/playToo"
+        app:layout_constraintBottom_toTopOf="@+id/friendDelete"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/friendTracks" />
+
+    <Switch
+        android:id="@+id/friendDelete"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/deleteAfterEnd"
+        app:layout_constraintBottom_toTopOf="@id/friendPassButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playButton" />
+</androidx.constraintlayout.widget.ConstraintLayout>

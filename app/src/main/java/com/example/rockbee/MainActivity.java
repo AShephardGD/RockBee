@@ -1,16 +1,21 @@
 package com.example.rockbee;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
-import android.os.RemoteException;
-import android.support.v4.media.session.MediaControllerCompat;
-import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -44,8 +49,7 @@ public class MainActivity extends FragmentActivity {
     private MusicFragment mf = new MusicFragment();//2
     private PlaylistFragment pf = new PlaylistFragment();//3
     private ServerMusicFragment smf = new ServerMusicFragment();//4
-    private int isLooping = 0,  color = 1;
-    private boolean isRandom = false;
+    private int color = 1;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private LookingForProgress progress = new LookingForProgress();
     private TreeMap<String, ArrayList<File>> playlists;
@@ -85,6 +89,12 @@ public class MainActivity extends FragmentActivity {
                 viewPager.setAdapter(sectionsPagerAdapter);
                 tabs.setupWithViewPager(viewPager);
                 progress.setMusicFragment(mf);
+                Handler h = new Handler(){
+                    public void handleMessage(android.os.Message msg) {
+                        mf.resetTime();
+                    }
+                };
+                progress.setH(h);
                 progress.start();
                 mf.setThread(progress);
                 mf.setCatalogFragment(cf);
@@ -93,6 +103,47 @@ public class MainActivity extends FragmentActivity {
                 pf.setCatalogFragment(cf);
                 pf.setMusicFragment(mf);
                 viewPager.setCurrentItem(1);
+                viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+                    @Override
+                    public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) { }
+                    @Override
+                    public void onPageSelected(int position) {
+                        if(position == 4){
+                            if(isConnectedToTheInternet())return;
+                            if(smf.getName() == null) {
+                                View view = getLayoutInflater().inflate(R.layout.playlists_alert_dialog, null);
+                                EditText text = view.findViewById(R.id.newPlaylistName);
+                                text.setHint(R.string.enterName);
+                                new AlertDialog.Builder(MainActivity.this)
+                                        .setTitle(R.string.name)
+                                        .setPositiveButton(getResources().getText(R.string.ready), new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                String s = text.getText().toString();
+                                                if(s.equals("")) {
+                                                    Toast.makeText(MainActivity.this, getResources().getText(R.string.noName), Toast.LENGTH_SHORT).show();
+                                                    viewPager.setCurrentItem(3);
+                                                }
+                                                else smf.setName(s);
+                                            }
+                                        })
+                                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                viewPager.setCurrentItem(3);
+                                            }
+                                        })
+                                        .setMessage(R.string.whyNeedName)
+                                        .setCancelable(false)
+                                        .setView(view)
+                                        .create()
+                                        .show();
+                            }
+                        }
+                    }
+                    @Override
+                    public void onPageScrollStateChanged(int state) { }
+                });
                 mf.setIsPlaying(MainActivity.this.service.getNowPlaying());
             }
             @Override
@@ -125,13 +176,18 @@ public class MainActivity extends FragmentActivity {
             i++;
         }
         ed.putInt("numbersOfPlaylists", i);
-        ed.putBoolean("IsRandom", isRandom);
-        ed.putInt("IsLooping", isLooping);
+        ed.putBoolean("IsRandom", sf.getRan());
+        ed.putInt("IsLooping", sf.getLoop());
         ed.putInt("color", color);
         lastPlaylist = new ArrayList<>(mf.getPlaylist());
         int len = lastPlaylist.size();
         for(int a = 0; a < len; a++)ed.putString("lastPlaylist" + a, lastPlaylist.get(a).getAbsolutePath());
         ed.putInt("lenLastPlaylist", len);
+        ed.putString("nameOfUser", smf.getName());
+        ed.putBoolean("isUserConnected", smf.isConnected());
+        ed.putBoolean("isUserRoom", smf.isRoom());
+        ed.putString("connectedAddress", smf.getConnectedAddress());
+        ed.putBoolean("delete", smf.isDelete());
         ed.apply();
     }
     public void load() {
@@ -150,8 +206,8 @@ public class MainActivity extends FragmentActivity {
             playlists.put(name, songs);
         }
         pf.setPlaylists(playlists);
-        isRandom = sPref.getBoolean("IsRandom", false);
-        isLooping = sPref.getInt("IsLooping", 0);
+        boolean isRandom = sPref.getBoolean("IsRandom", false);
+        int isLooping = sPref.getInt("IsLooping", 0);
         sf.set(isRandom, isLooping);
         mf.setIsRandom(isRandom);
         sf.setColorNum(color);
@@ -181,6 +237,11 @@ public class MainActivity extends FragmentActivity {
         service.setIsLooping(isLooping);
         service.setRandom(isRandom);
         mf.setPlaylist(lastPlaylist);
+        smf.setName(sPref.getString("nameOfUser", null));
+        smf.setConnected(sPref.getBoolean("isUserConnected", false));
+        smf.setRoom(sPref.getBoolean("isUserRoom", false));
+        smf.setConnectedAddress(sPref.getString("connectedAddress", null));
+        smf.setDelete(sPref.getBoolean("delete", false));
     }
     @Override
     protected void onDestroy() {
@@ -190,8 +251,6 @@ public class MainActivity extends FragmentActivity {
         progress.interrupt();
     }
     public void applyChanges(int back, int text){
-        isRandom = sf.getRan();
-        isLooping = sf.getLoop();
         color = sf.getColorNum();
         cf.changeColor(text);
         mf.changeColor(text);
@@ -200,9 +259,9 @@ public class MainActivity extends FragmentActivity {
         viewPager.setBackgroundColor(back);
         tabs.setTabTextColors(text, text);
         tabs.setBackgroundColor(back);
-        mf.setIsRandom(isRandom);
-        service.setIsLooping(isLooping);
-        service.setRandom(isRandom);
+        mf.setIsRandom(sf.getRan());
+        service.setIsLooping(sf.getLoop());
+        service.setRandom(sf.getRan());
     }
 
     public void setNewPlaylistName(String s){
@@ -237,5 +296,30 @@ public class MainActivity extends FragmentActivity {
                             MY_PERMISSIONS_REQUEST_STORAGE);
                 }
         }
+    }
+    public void refresh(){
+        sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, MainActivity.this);
+        viewPager = findViewById(R.id.view_pager);
+        tabs = findViewById(R.id.tabs);
+        viewPager.setAdapter(sectionsPagerAdapter);
+        tabs.setupWithViewPager(viewPager);
+    }
+    public boolean isConnectedToTheInternet(){
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        if(!(activeNetwork != null && activeNetwork.isConnectedOrConnecting())) {
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle(R.string.noInternet)
+                    .setPositiveButton(getResources().getText(R.string.ok), new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            viewPager.setCurrentItem(3);
+                        }
+                    })
+                    .setCancelable(false)
+                    .create()
+                    .show();
+        }
+        return !(activeNetwork != null && activeNetwork.isConnectedOrConnecting());
     }
 }

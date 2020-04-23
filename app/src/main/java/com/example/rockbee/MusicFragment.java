@@ -61,7 +61,8 @@ public class MusicFragment extends Fragment {
         next.setImageResource(R.drawable.ic_media_next);
         back.setImageResource(R.drawable.ic_media_rew);
         forward.setImageResource(R.drawable.ic_media_ff);
-        max = service.getDuration();
+        if(service.getNowPlaying() != null)max = service.getDuration();
+        else max = 0;
         time.setTextColor(color);
         name.setTextColor(color);
         if(service.isPlaying())ps.setImageResource(R.drawable.ic_media_pause);
@@ -181,14 +182,15 @@ public class MusicFragment extends Fragment {
         } catch(IllegalStateException e){}
     }
     public void resetTime(){
-        int now = service.getCurrentPosition();
+        int now;
+        if(service.getNowPlaying() != null) now = service.getCurrentPosition();
+        else now = 0;
         sec = (max / 1000) % 60;
         min =  max / 60000;
         nowSec = (now / 1000) % 60;
         nowMin = now / 60000;
         try {
-            if (nowSec / 10 == 0 && sec / 10 == 0)
-                time.setText(nowMin + ":0" + nowSec + "/" + min + ":0" + sec);
+            if (nowSec / 10 == 0 && sec / 10 == 0) time.setText(nowMin + ":0" + nowSec + "/" + min + ":0" + sec);
             else if (sec / 10 == 0) time.setText(nowMin + ":" + nowSec + "/" + min + ":0" + sec);
             else if (nowSec / 10 == 0) time.setText(nowMin + ":0" + nowSec + "/" + min + ":" + sec);
             else time.setText(nowMin + ":" + nowSec + "/" + min + ":" + sec);
