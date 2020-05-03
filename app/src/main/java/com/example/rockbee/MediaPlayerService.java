@@ -41,7 +41,7 @@ public class MediaPlayerService extends Service {
     private final String NOTIFICATION_DEFAULT_CHANNEL_ID = "default_channel";
     private MediaPlayer mediaPlayer = new MediaPlayer();
     private ArrayList<File> playlist = new ArrayList<>();
-    private boolean isRandom = false;
+    private boolean isRandom = false, wasPlaying = true;
     private int isLooping = 0;
     private File nowPlaying = null;
     private MusicFragment mf;
@@ -61,6 +61,7 @@ public class MediaPlayerService extends Service {
         int currentState = PlaybackStateCompat.STATE_STOPPED;
         @Override
         public void onPlay() {
+            wasPlaying = true;
             startService(new Intent(getApplicationContext(), MediaPlayerService.class));
             updateMetadataFromTrack();
             if(!audioFocus){
@@ -92,6 +93,7 @@ public class MediaPlayerService extends Service {
 
         @Override
         public void onPause() {
+            wasPlaying = false;
             audioFocus = false;
             mediaPlayer.pause();
             mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
@@ -141,7 +143,7 @@ public class MediaPlayerService extends Service {
         public void onAudioFocusChange(int focusChange) {
             switch(focusChange){
                 case AudioManager.AUDIOFOCUS_GAIN:
-                    if(!mediaPlayer.isPlaying()) mediaSessionCallback.onPlay();
+                    if(wasPlaying) mediaSessionCallback.onPlay();
                     mediaPlayer.setVolume(1.0f, 1.0f);
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
@@ -158,7 +160,6 @@ public class MediaPlayerService extends Service {
             if(AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) mediaSessionCallback.onPause();
         }
     };
-    public MediaPlayerService() {}
     @Override
     public void onCreate() {
         super.onCreate();
@@ -190,7 +191,6 @@ public class MediaPlayerService extends Service {
         mediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(applicationContext, 0, mediaButtonIntent, 0));
         Log.e("Service created", "hi");
     }
-
     @Override
     public void onDestroy() {
         stopForeground(true);
@@ -207,13 +207,11 @@ public class MediaPlayerService extends Service {
     class MyBinder extends Binder {
         public MediaPlayerService getService() {return MediaPlayerService.this; }
     }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         MediaButtonReceiver.handleIntent(mediaSession, intent);
         return super.onStartCommand(intent, flags, startId);
     }
-
     public void playMusic(final File f, ArrayList<File> sentPlaylist){
         mediaPlayer.release();
         mediaPlayer = new MediaPlayer();
@@ -249,9 +247,6 @@ public class MediaPlayerService extends Service {
             e.printStackTrace();
         }
     }
-    public void setRandom(boolean r) {isRandom = r;}
-    public void setIsLooping(int i){isLooping = i;}
-    public boolean isPlaying(){return mediaPlayer.isPlaying();}
     public void play(){
         MediaControllerCompat controller;
         try {
@@ -261,7 +256,6 @@ public class MediaPlayerService extends Service {
             e.printStackTrace();
         }
     }
-    public int getDuration(){return mediaPlayer.getDuration();}
     public int getCurrentPosition() {
         try {
             return mediaPlayer.getCurrentPosition();
@@ -269,9 +263,6 @@ public class MediaPlayerService extends Service {
             return 0;
         }
     }
-    public void seekTo(int i){mediaPlayer.seekTo(i);}
-    public File getNowPlaying(){return nowPlaying;}
-    public void setFragments(MusicFragment f){mf = f;}
     public void refresh(int playbackState){
         switch(playbackState) {
             case PlaybackStateCompat.STATE_PLAYING:
@@ -334,4 +325,20 @@ public class MediaPlayerService extends Service {
             e.printStackTrace();
         }
     }
+    public void connected(){
+        MediaControllerCompat controller;
+        try {
+            controller = new MediaControllerCompat(this, mediaSession.getSessionToken());
+            if(nowPlaying != null)controller.getTransportControls().pause();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+    public void setRandom(boolean r) {isRandom = r;}
+    public void setIsLooping(int i){isLooping = i;}
+    public boolean isPlaying(){return mediaPlayer.isPlaying();}
+    public void seekTo(int i){mediaPlayer.seekTo(i);}
+    public File getNowPlaying(){return nowPlaying;}
+    public void setFragments(MusicFragment f){mf = f;}
+    public int getDuration(){return mediaPlayer.getDuration();}
 }

@@ -18,13 +18,12 @@ public class LookingForProgress extends Thread {
             } catch (IllegalStateException e){}
         }
     }
-    public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
     public void changeMode(){
         if(mode) mode = false;
         else mode = true;
     }
-
     public void setH(Handler h) {
         this.h = h;
     }
+    public void setMusicFragment(MusicFragment fragment) {mf = fragment;}
 }

@@ -7,7 +7,6 @@ import android.view.ViewGroup;
 import android.widget.RadioButton;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
@@ -166,7 +165,6 @@ public class SettingFragment extends Fragment {
                 else if(colorNum == 16) changeColor(getResources().getColor(R.color.lily), getResources().getColor(R.color.darkPurple));
                 else if(colorNum == 17) changeColor(getResources().getColor(R.color.darkPurple), getResources().getColor(R.color.turquoise));
                 else if(colorNum == 18) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
-                Toast.makeText(getActivity(), getResources().getText(R.string.saved), Toast.LENGTH_SHORT).show();
             }
         });
         return view;
@@ -175,14 +173,6 @@ public class SettingFragment extends Fragment {
         isRandom = ran;
         isLooping = loops;
     }
-    public boolean getRan(){
-        return isRandom;
-    }
-    public int getLoop(){
-        return isLooping;
-    }
-    public int getColorNum() { return colorNum; }
-    public void setColorNum(int colorNum) { this.colorNum = colorNum; }
     public void changeColor(int back, int text){
         color = text;
         tw1.setTextColor(color);
@@ -195,4 +185,12 @@ public class SettingFragment extends Fragment {
         ((MainActivity) getActivity()).applyChanges(back, text);
     }
     public void setColor(int c){color = c;}
+    public boolean getRan(){
+        return isRandom;
+    }
+    public int getLoop(){
+        return isLooping;
+    }
+    public int getColorNum() { return colorNum; }
+    public void setColorNum(int colorNum) { this.colorNum = colorNum; }
 }

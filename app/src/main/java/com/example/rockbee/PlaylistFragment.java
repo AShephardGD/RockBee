@@ -29,7 +29,8 @@ public class PlaylistFragment extends Fragment {
     private int num = 0, color;
     private MusicFragment mf;
     private FloatingActionButton fab, back;
-    MediaPlayerService service;
+    private MediaPlayerService service;
+    private ServerMusicFragment smf;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         View view = inflater.inflate(R.layout.playlists, container, false);
@@ -62,14 +63,16 @@ public class PlaylistFragment extends Fragment {
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        service.playMusic(tmpPlaylist.get(position), tmpPlaylist);
-                        mf.setPlaylist(tmpPlaylist);
+                        if(!smf.isConnected() && !smf.isRoom()) {
+                            service.playMusic(tmpPlaylist.get(position), tmpPlaylist);
+                            mf.setPlaylist(tmpPlaylist);
+                        } else Toast.makeText(getActivity(), getResources().getString(R.string.cantPlayWithServer), Toast.LENGTH_SHORT).show();
                     }
                 });
                 listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                     @Override
                     public boolean onItemLongClick(AdapterView<?> parent, View view, final int position1, long id) {
-                        new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                        new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
                                 .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -79,12 +82,18 @@ public class PlaylistFragment extends Fragment {
                                         playlists.put(names.get(position), tmpPlaylist);
                                     }
                                 })
-                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-
-                            }
-                        }).create().show();
+                                .setNeutralButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        smf.addToThePlaylist(tmpPlaylist.get(position1));
+                                    }
+                                })
+                                .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {}
+                                    })
+                                .create()
+                                .show();
                         return true;
                     }
                 });
@@ -128,7 +137,7 @@ public class PlaylistFragment extends Fragment {
     }
     public void createNewPlaylist(String s){
         if(!playlists.containsKey(s) && !s.equals("")) {
-            playlists.put(s, new ArrayList<File>());
+            playlists.put(s, new ArrayList<>());
             names = new ArrayList<>();
             sizeOfPlaylist = new ArrayList<>();
             for (Map.Entry<String, ArrayList<File>> entry : playlists.entrySet()) {
@@ -140,7 +149,6 @@ public class PlaylistFragment extends Fragment {
         } else if(s.equals("")) Toast.makeText(getActivity(), "" + getResources().getText(R.string.noNamePlaylist), Toast.LENGTH_SHORT).show();
         else Toast.makeText(getActivity(), "" + getResources().getText(R.string.playlistAlreadyExists), Toast.LENGTH_SHORT).show();
     }
-    public void setCatalogFragment(CatalogFragment fragment) {cf = fragment;}
     public void onBackPressed(){
         if(num == 1){
             num = 0;
@@ -236,9 +244,6 @@ public class PlaylistFragment extends Fragment {
         }
         return names;
     }
-    public void setMusicFragment(MusicFragment fragment){mf = fragment;}
-    public TreeMap<String, ArrayList<File>> getPlaylists() {return playlists; }
-    public void setPlaylists(TreeMap<String, ArrayList<File>> playlists) {this.playlists = playlists; }
     public void newPlaylistfromNowPlays(ArrayList<File> np, String s){
         if(!playlists.containsKey(s) && !s.equals("")) {
             playlists.put(s, new ArrayList<>(np));
@@ -255,4 +260,9 @@ public class PlaylistFragment extends Fragment {
     }
     public void changeColor(int text) {color = text;}
     public void setService(MediaPlayerService s){service = s;}
+    public void setCatalogFragment(CatalogFragment fragment) {cf = fragment;}
+    public void setMusicFragment(MusicFragment fragment){mf = fragment;}
+    public TreeMap<String, ArrayList<File>> getPlaylists() {return playlists; }
+    public void setPlaylists(TreeMap<String, ArrayList<File>> playlists) {this.playlists = playlists; }
+    public void setServerMusicFragment(ServerMusicFragment fragment){smf = fragment;}
 }

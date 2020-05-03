@@ -11,6 +11,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -27,16 +28,23 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
+
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 import static android.os.Environment.getExternalStorageDirectory;
 
 /*
 Список Ошибок:
-1)LookingForProgressThread(возможно): Периодически зависает активность: кнопки нажимают, а отжаться не могут. При этом никаких действий не выполняют.
-(Возможно это возникает только из-за работы с андроид студио: останвливать активность на середине работы видно не очень складывается на ее способности работать потом.)
+1)Иногда сервис не переключает музыку, когда телефон выключен. Выяснить.
+2)При долгой паузе и отключенном приложении сервис выключается. Так не должно быть.
+3)Включить музыку. Появилось уведомление. Остановить музыку. Смахнуть уведомление. Приложение вылетело. ЛогКэт молчит как партизан.
 Доделать:
 1)Серверную часть(обязательно)
 2)Отдать на проверку бетатестерами, чтобы их кривые руки указали на ошибки.
@@ -61,6 +69,11 @@ public class MainActivity extends FragmentActivity {
     private MediaPlayerService service;
     private ServiceConnection sConn;
     private ArrayList<File> lastPlaylist = new ArrayList<>();
+    private Handler newUUIDH = new Handler(){
+        public void handleMessage(android.os.Message msg){
+            smf.UUIDChanged();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +95,7 @@ public class MainActivity extends FragmentActivity {
                 cf.setService(MainActivity.this.service);
                 mf.setService(MainActivity.this.service);
                 pf.setService(MainActivity.this.service);
+                smf.setService(MainActivity.this.service);
                 sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, MainActivity.this);
                 viewPager = findViewById(R.id.view_pager);
                 tabs = findViewById(R.id.tabs);
@@ -98,10 +112,13 @@ public class MainActivity extends FragmentActivity {
                 progress.start();
                 mf.setThread(progress);
                 mf.setCatalogFragment(cf);
+                mf.setServerMusicFragment(smf);
                 cf.setPlaylistFragment(pf);
                 cf.setMusicFragment(mf);
+                cf.setServerMusicFragment(smf);
                 pf.setCatalogFragment(cf);
                 pf.setMusicFragment(mf);
+                pf.setServerMusicFragment(smf);
                 viewPager.setCurrentItem(1);
                 viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
                     @Override
@@ -124,7 +141,10 @@ public class MainActivity extends FragmentActivity {
                                                     Toast.makeText(MainActivity.this, getResources().getText(R.string.noName), Toast.LENGTH_SHORT).show();
                                                     viewPager.setCurrentItem(3);
                                                 }
-                                                else smf.setName(s);
+                                                else {
+                                                    smf.setName(s);
+                                                    refresh(4);
+                                                }
                                             }
                                         })
                                         .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
@@ -133,11 +153,13 @@ public class MainActivity extends FragmentActivity {
                                                 viewPager.setCurrentItem(3);
                                             }
                                         })
-                                        .setMessage(R.string.whyNeedName)
                                         .setCancelable(false)
                                         .setView(view)
                                         .create()
                                         .show();
+                            }
+                            if(smf.getUUID() != null){
+                                new checkUUID().execute();
                             }
                         }
                     }
@@ -188,6 +210,8 @@ public class MainActivity extends FragmentActivity {
         ed.putBoolean("isUserRoom", smf.isRoom());
         ed.putString("connectedAddress", smf.getConnectedAddress());
         ed.putBoolean("delete", smf.isDelete());
+        ed.putBoolean("isPlayingToo", smf.isPlayingToo());
+        ed.putString("UUID", smf.getUUID());
         ed.apply();
     }
     public void load() {
@@ -242,6 +266,9 @@ public class MainActivity extends FragmentActivity {
         smf.setRoom(sPref.getBoolean("isUserRoom", false));
         smf.setConnectedAddress(sPref.getString("connectedAddress", null));
         smf.setDelete(sPref.getBoolean("delete", false));
+        smf.setPlayingToo(sPref.getBoolean("isPlayingToo", false));
+        smf.setUUID(sPref.getString("UUID", null));
+        smf.setMe(getResources().getString(R.string.name));
     }
     @Override
     protected void onDestroy() {
@@ -263,13 +290,6 @@ public class MainActivity extends FragmentActivity {
         service.setIsLooping(sf.getLoop());
         service.setRandom(sf.getRan());
     }
-
-    public void setNewPlaylistName(String s){
-        pf.createNewPlaylist(s);
-    }
-    public void playlistFromNowPlays(String s){
-        pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
-    }
     public void changeColor(int back, int text){
         cf.changeColor(text);
         mf.changeColor(text);
@@ -289,7 +309,7 @@ public class MainActivity extends FragmentActivity {
         switch(requestCode){
             case MY_PERMISSIONS_REQUEST_STORAGE:
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                    if (root.isDirectory())cf.openDirectory(root, cf.getCg());
+                    if (root.isDirectory()) cf.new Open(root);
                 } else{
                     ActivityCompat.requestPermissions(MainActivity.this,
                             new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
@@ -297,12 +317,13 @@ public class MainActivity extends FragmentActivity {
                 }
         }
     }
-    public void refresh(){
+    public void refresh(int n){
         sectionsPagerAdapter = new SectionsPagerAdapter(fm, sf, cf, mf, pf, smf, MainActivity.this);
         viewPager = findViewById(R.id.view_pager);
         tabs = findViewById(R.id.tabs);
         viewPager.setAdapter(sectionsPagerAdapter);
         tabs.setupWithViewPager(viewPager);
+        viewPager.setCurrentItem(n);
     }
     public boolean isConnectedToTheInternet(){
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -321,5 +342,35 @@ public class MainActivity extends FragmentActivity {
                     .show();
         }
         return !(activeNetwork != null && activeNetwork.isConnectedOrConnecting());
+    }
+    class checkUUID extends AsyncTask {
+
+        @Override
+        protected Object doInBackground(Object[] objects) {
+            Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl("http://192.168.1.65:8080")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build();
+            CommandToTheServer command = retrofit.create(CommandToTheServer.class);
+            Call<String> generateUUID = command.generateUUID();
+            Call<Boolean> checkingUUID = command.checkUUID(smf.getUUID());
+            try {
+                Response<Boolean> response = checkingUUID.execute();
+                if(!response.body()){
+                    Response<String> newUUID = generateUUID.execute();
+                    smf.setUUID(newUUID.body());
+                    newUUIDH.sendEmptyMessage(1);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+    public void setNewPlaylistName(String s){
+        pf.createNewPlaylist(s);
+    }
+    public void playlistFromNowPlays(String s){
+        pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
     }
 }

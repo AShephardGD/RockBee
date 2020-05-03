@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,6 +45,17 @@ public class MusicFragment extends Fragment {
     private TreeMap<String, File> music;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 0;
     private MediaPlayerService service;
+    private ServerMusicFragment smf;
+    Handler h = new Handler(){
+        public void handleMessage(android.os.Message msg) {
+            playlist.addAll(music.values());
+            try {
+                service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
+                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                nowPlays.setAdapter(adapter);
+            } catch (IndexOutOfBoundsException e) {}
+        }
+    };
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -77,41 +89,45 @@ public class MusicFragment extends Fragment {
         nowPlays.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                service.playMusic(playlist.get(position), playlist);
+                if(!smf.isConnected() && !smf.isRoom())service.playMusic(playlist.get(position), playlist);
+                else Toast.makeText(getActivity(), getResources().getString(R.string.cantPlayWithServer), Toast.LENGTH_SHORT).show();
             }
         });
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                music = new TreeMap<>();
-                playlist = new ArrayList<>();
-                playAllMusic(new Environment().getExternalStorageDirectory());
-                playlist.addAll(music.values());
-                try {
-                    service.playMusic(playlist.get((int) Math.round(Math.random() * (playlist.size() - 1))), playlist);
-                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-                    nowPlays.setAdapter(adapter);
-                } catch (IndexOutOfBoundsException e){}
+                if(!smf.isConnected() && !smf.isRoom()) {
+                    music = new TreeMap<>();
+                    playlist = new ArrayList<>();
+                    new playAll().start();
+
+                } else Toast.makeText(getActivity(), getResources().getString(R.string.cantPlayWithServer), Toast.LENGTH_SHORT).show();
             }
         });
         nowPlays.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
-                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteFromNowPlays))
+                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
                         .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
                             @Override
+                            public void onClick(DialogInterface dialog, int which) {}
+                        })
+                        .setPositiveButton(R.string.deleteFromNowPlays, new DialogInterface.OnClickListener() {
+                            @Override
                             public void onClick(DialogInterface dialog, int which) {
-
+                                if(isPlaying != null) if(isPlaying.equals(playlist.get(position))) next.performClick();
+                                playlist.remove(position);
+                                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                                nowPlays.setAdapter(adapter);
                             }
-                        }).setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if(isPlaying.equals(playlist.get(position))) next.performClick();
-                        playlist.remove(position);
-                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-                        nowPlays.setAdapter(adapter);
-                    }
-                }).create().show();
+                        })
+                        .setNeutralButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                smf.addToThePlaylist(playlist.get(position));
+                            }
+                        })
+                        .create().show();
                 return true;
             }
         });
@@ -119,7 +135,7 @@ public class MusicFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 int delta;
-                if(isPlaying != null) {
+                if(isPlaying != null && !smf.isConnected() && !smf.isRoom()) {
                      switch (v.getId()) {
                          case R.id.prev:
                              service.prev();
@@ -143,7 +159,8 @@ public class MusicFragment extends Fragment {
                              break;
                          default:
                      }
-                 }
+                 } else if(smf.isConnected() || smf.isRoom())
+                    Toast.makeText(getActivity(), getResources().getString(R.string.cantPlayWithServer), Toast.LENGTH_SHORT).show();
             }
         };
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -171,7 +188,6 @@ public class MusicFragment extends Fragment {
         back.setOnClickListener(listener);
         return view;
     }
-    public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
     public void setPlaylist(ArrayList<File> play) {
         try {
             playlist = new ArrayList<>(play);
@@ -199,8 +215,6 @@ public class MusicFragment extends Fragment {
             Log.e("MusicFragment", "resetTime:" + e.toString());
         }
     }
-    public void setThread(LookingForProgress thread) {progress = thread;}
-    public void setIsRandom(boolean random) {isRandom = random;}
     public void setIsPlaying(File play) {
         isPlaying = play;
         if(isPlaying != null) {
@@ -215,8 +229,6 @@ public class MusicFragment extends Fragment {
             nowPlays.setAdapter(adapter);
         }
     }
-    public ArrayList<File> getPlaylist(){return playlist;}
-    public void changeColor(int text) {color = text;}
     public void playAllMusic(File file){
         try {
             File[] files = file.listFiles(new FilenameFilter() {
@@ -246,7 +258,6 @@ public class MusicFragment extends Fragment {
             else Toast.makeText(getActivity(), getResources().getText(R.string.cantPlay), Toast.LENGTH_SHORT).show();
         }
     }
-    public void setService(MediaPlayerService s){service = s;}
     public void setMax(){
         if(seekBar != null) {
             seekBar.setProgress(0);
@@ -254,6 +265,20 @@ public class MusicFragment extends Fragment {
         }
         max = service.getDuration();
     }
+    class playAll extends Thread{
+        @Override
+        public void run() {
+            playAllMusic(new Environment().getExternalStorageDirectory());
+            h.sendEmptyMessage(1);
+        }
+    }
     public void setPlay(){if(ps != null) ps.setImageResource(R.drawable.ic_media_play);}
     public void setPause(){if(ps != null) ps.setImageResource(R.drawable.ic_media_pause);}
+    public void setCatalogFragment(CatalogFragment fragment){cf = fragment;}
+    public void setService(MediaPlayerService s){service = s;}
+    public ArrayList<File> getPlaylist(){return playlist;}
+    public void changeColor(int text) {color = text;}
+    public void setThread(LookingForProgress thread) {progress = thread;}
+    public void setIsRandom(boolean random) {isRandom = random;}
+    public void setServerMusicFragment(ServerMusicFragment fragment) {smf= fragment;}
 }
