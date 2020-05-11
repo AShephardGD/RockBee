@@ -72,28 +72,49 @@ public class PlaylistFragment extends Fragment {
                 listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                     @Override
                     public boolean onItemLongClick(AdapterView<?> parent, View view, final int position1, long id) {
-                        new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
-                                .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        tmpPlaylist.remove(position1);
-                                        CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
-                                        listView.setAdapter(adapter);
-                                        playlists.put(names.get(position), tmpPlaylist);
-                                    }
-                                })
-                                .setNeutralButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        smf.addToThePlaylist(tmpPlaylist.get(position1));
-                                    }
-                                })
-                                .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {}
+                        if(smf.isConnected() || smf.isRoom()) {
+                            new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
+                                    .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            tmpPlaylist.remove(position1);
+                                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
+                                            listView.setAdapter(adapter);
+                                            playlists.put(names.get(position), tmpPlaylist);
+                                        }
                                     })
-                                .create()
-                                .show();
+                                    .setNegativeButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            smf.addToThePlaylist(tmpPlaylist.get(position1));
+                                        }
+                                    })
+                                    .setNeutralButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                        }
+                                    })
+                                    .create()
+                                    .show();
+                        } else {
+                            new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
+                                    .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            tmpPlaylist.remove(position1);
+                                            CatalogAdapter adapter = new CatalogAdapter(getActivity(), tmpPlaylist, "" + getResources().getText(R.string.cg), color);
+                                            listView.setAdapter(adapter);
+                                            playlists.put(names.get(position), tmpPlaylist);
+                                        }
+                                    })
+                                    .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                        }
+                                    })
+                                    .create()
+                                    .show();
+                        }
                         return true;
                     }
                 });

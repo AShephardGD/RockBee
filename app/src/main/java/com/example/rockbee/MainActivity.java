@@ -15,6 +15,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -72,6 +73,10 @@ public class MainActivity extends FragmentActivity {
     private Handler newUUIDH = new Handler(){
         public void handleMessage(android.os.Message msg){
             smf.UUIDChanged();
+        }
+    }, check = new Handler(){
+        public void handleMessage(android.os.Message msg){
+            Toast.makeText(MainActivity.this, "here", Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -158,9 +163,8 @@ public class MainActivity extends FragmentActivity {
                                         .create()
                                         .show();
                             }
-                            if(smf.getUUID() != null){
-                                new checkUUID().execute();
-                            }
+                            new checkUUID().execute();
+                            smf.setMe(getResources().getString(R.string.name));
                         }
                     }
                     @Override
@@ -344,7 +348,6 @@ public class MainActivity extends FragmentActivity {
         return !(activeNetwork != null && activeNetwork.isConnectedOrConnecting());
     }
     class checkUUID extends AsyncTask {
-
         @Override
         protected Object doInBackground(Object[] objects) {
             Retrofit retrofit = new Retrofit.Builder()
@@ -352,8 +355,11 @@ public class MainActivity extends FragmentActivity {
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
             CommandToTheServer command = retrofit.create(CommandToTheServer.class);
-            Call<String> generateUUID = command.generateUUID();
-            Call<Boolean> checkingUUID = command.checkUUID(smf.getUUID());
+            ArrayList<Object> params = new ArrayList<>();
+            params.add(smf.getUUID());
+            params.add(Settings.Secure.getString(MainActivity.this.getContentResolver(), Settings.Secure.ANDROID_ID));
+            Call<String> generateUUID = command.generateUUID(Settings.Secure.getString(MainActivity.this.getContentResolver(), Settings.Secure.ANDROID_ID));
+            Call<Boolean> checkingUUID = command.checkUUID(params);
             try {
                 Response<Boolean> response = checkingUUID.execute();
                 if(!response.body()){
@@ -361,16 +367,10 @@ public class MainActivity extends FragmentActivity {
                     smf.setUUID(newUUID.body());
                     newUUIDH.sendEmptyMessage(1);
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException e) {e.printStackTrace();}
             return null;
         }
     }
-    public void setNewPlaylistName(String s){
-        pf.createNewPlaylist(s);
-    }
-    public void playlistFromNowPlays(String s){
-        pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);
-    }
+    public void setNewPlaylistName(String s){pf.createNewPlaylist(s);}
+    public void playlistFromNowPlays(String s){pf.newPlaylistfromNowPlays(mf.getPlaylist(), s);}
 }

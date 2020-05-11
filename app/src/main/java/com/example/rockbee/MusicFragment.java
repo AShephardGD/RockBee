@@ -107,27 +107,51 @@ public class MusicFragment extends Fragment {
         nowPlays.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
-                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
-                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {}
-                        })
-                        .setPositiveButton(R.string.deleteFromNowPlays, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                if(isPlaying != null) if(isPlaying.equals(playlist.get(position))) next.performClick();
-                                playlist.remove(position);
-                                CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
-                                nowPlays.setAdapter(adapter);
-                            }
-                        })
-                        .setNeutralButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                smf.addToThePlaylist(playlist.get(position));
-                            }
-                        })
-                        .create().show();
+                if(smf.isConnected() || smf.isRoom()) {
+                    new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
+                            .setNeutralButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                }
+                            })
+                            .setPositiveButton(R.string.deleteFromNowPlays, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    if (isPlaying != null)
+                                        if (isPlaying.equals(playlist.get(position)))
+                                            next.performClick();
+                                    playlist.remove(position);
+                                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                                    nowPlays.setAdapter(adapter);
+                                }
+                            })
+                            .setNegativeButton(R.string.addToTheServer, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    smf.addToThePlaylist(playlist.get(position));
+                                }
+                            })
+                            .create().show();
+                } else {
+                    new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.whatAreYouDoing))
+                            .setNeutralButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                }
+                            })
+                            .setPositiveButton(R.string.deleteFromNowPlays, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    if (isPlaying != null)
+                                        if (isPlaying.equals(playlist.get(position)))
+                                            next.performClick();
+                                    playlist.remove(position);
+                                    CatalogAdapter adapter = new CatalogAdapter(getActivity(), playlist, "" + getResources().getText(R.string.cg), color);
+                                    nowPlays.setAdapter(adapter);
+                                }
+                            })
+                            .create().show();
+                }
                 return true;
             }
         });

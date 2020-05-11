@@ -74,38 +74,78 @@ public class CatalogFragment extends Fragment {
             cg.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                 @Override
                 public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
-                    if(files.get(position).isFile()){
-                        new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.chooseAction))
-                                .setItems(new String[]{getResources().getString(R.string.addToPlaylist), getResources().getString(R.string.addToNowPlays), getResources().getString(R.string.addToTheServer), getResources().getString(R.string.delete)}, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        if (which == 0) new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.choosePlaylist))
-                                                .setItems(pf.getNames().toArray(new String[0]), new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
-                                                    }
-                                                }).create().show();
-                                        else if(which == 2) smf.addToThePlaylist(files.get(position));
-                                        else if(which == 3) new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
-                                                .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        if(files.get(position).delete()) {
-                                                            files.remove(position);
-                                                            new Open(parentDirectory).start();
-                                                        } else Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
-                                                    }
-                                                })
-                                                .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
+                    if(files.get(position).isFile()) {
+                        if (smf.isConnected() || smf.isRoom()) {
+                            new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.chooseAction))
+                                    .setItems(new String[]{getResources().getString(R.string.addToPlaylist), getResources().getString(R.string.addToNowPlays), getResources().getString(R.string.addToTheServer), getResources().getString(R.string.delete)}, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            if (which == 0)
+                                                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.choosePlaylist))
+                                                        .setItems(pf.getNames().toArray(new String[0]), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
+                                                            }
+                                                        }).create().show();
+                                            else if (which == 2)
+                                                smf.addToThePlaylist(files.get(position));
+                                            else if (which == 3)
+                                                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                                                        .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                if (files.get(position).delete()) {
+                                                                    files.remove(position);
+                                                                    new Open(parentDirectory).start();
+                                                                } else
+                                                                    Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
+                                                            }
+                                                        })
+                                                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
 
-                                                    }
-                                                }).create().show();
-                                        else mf.addNewSongToNowPlays(files.get(position));
-                                    }
-                                }).create().show();
+                                                            }
+                                                        }).create().show();
+                                            else mf.addNewSongToNowPlays(files.get(position));
+                                        }
+                                    }).create().show();
+                        } else {
+                            new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.chooseAction))
+                                    .setItems(new String[]{getResources().getString(R.string.addToPlaylist), getResources().getString(R.string.addToNowPlays),  getResources().getString(R.string.delete)}, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            if (which == 0)
+                                                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.choosePlaylist))
+                                                        .setItems(pf.getNames().toArray(new String[0]), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                pf.addNewSongToPlaylist(files.get(position), pf.getNames().get(which));
+                                                            }
+                                                        }).create().show();
+                                            else if (which == 2)
+                                                new AlertDialog.Builder(getActivity()).setTitle(getResources().getText(R.string.deleteQ))
+                                                        .setPositiveButton(getResources().getText(R.string.delete), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                if (files.get(position).delete()) {
+                                                                    files.remove(position);
+                                                                    new Open(parentDirectory).start();
+                                                                } else
+                                                                    Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
+                                                            }
+                                                        })
+                                                        .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+
+                                                            }
+                                                        }).create().show();
+                                            else mf.addNewSongToNowPlays(files.get(position));
+                                        }
+                                    }).create().show();
+                        }
                     }
                     return true;
                 }

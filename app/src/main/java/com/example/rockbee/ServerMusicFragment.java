@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,7 @@ import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.Socket;
 import java.util.ArrayList;
 
 import retrofit2.Call;
@@ -81,8 +83,7 @@ public class ServerMusicFragment extends Fragment {
                     .show();
         }
     };
-    TextView text;
-    private CheckingForSongsAndUser checkingForSongsAndUser = new CheckingForSongsAndUser();
+    private TextView text;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         if(name != null) isName = true;
@@ -188,6 +189,7 @@ public class ServerMusicFragment extends Fragment {
             Button closeTheRoom = view.findViewById(R.id.closeTheRoom), myUserList = view.findViewById(R.id.myUserList), myPassButton = view.findViewById(R.id.myPassButton), myInfo = view.findViewById(R.id.myInfo), setPass = view.findViewById(R.id.setPass);
             myDelete.setChecked(delete);
             myDelete.setTextColor(color);
+            users.add(me);
             View.OnClickListener listener = new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -352,11 +354,12 @@ public class ServerMusicFragment extends Fragment {
                     h.sendEmptyMessage(1);
                 } catch (NullPointerException e){h.sendEmptyMessage(1);}
             } else if(command == 1){//Connect to the server
+                params.add(command);
                 params.add(UUIDConnectedRoom);
-                params.add(me.getUUID());
                 params.add(me.getName());
+                params.add(me.getUUID());
                 params.add(password);
-                Call<Integer> call = commands.connectToTheRoom(params);
+                Call<Integer> call = commands.command(params);
                 try{
                     Response<Integer> response = call.execute();
                     if(response.body() == 0){
@@ -365,19 +368,18 @@ public class ServerMusicFragment extends Fragment {
                         refresh.sendEmptyMessage(1);
                     }
                     else if(response.body() == 1) wrongPassword.sendEmptyMessage(1);
-                    else wrongRoom.sendEmptyMessage(1);
+                    else if(response.body() == 2) wrongRoom.sendEmptyMessage(1);
+                    else h.sendEmptyMessage(1);
                 } catch (IOException e) {
                     e.printStackTrace();
-                    h.sendEmptyMessage(1);
                 } catch (NullPointerException e){h.sendEmptyMessage(1);}
             } else if(command == 2){//Disconnect
-                params.add(UUIDConnectedRoom);
                 params.add(me.getName());
                 params.add(me.getUUID());
-                Call<Boolean> call = commands.disconnect(params);
+                Call<Integer> call = commands.command(params);
                 try{
-                    Response<Boolean> response = call.execute();
-                    if(response.body()){
+                    Response<Integer> response = call.execute();
+                    if(response.body() == 0){
                         isConnected = false;
                         playingToo = false;
                         delete = false;
@@ -389,10 +391,12 @@ public class ServerMusicFragment extends Fragment {
                     h.sendEmptyMessage(1);
                 } catch (NullPointerException e){h.sendEmptyMessage(1);}
             } else if(command == 3) {//Close the room
-                Call<Boolean> call = commands.closeTheRoom(UUIDConnectedRoom);
+                params.add(command);
+                params.add(UUIDConnectedRoom);
+                Call<Integer> call = commands.command(params);
                 try{
-                    Response<Boolean> response = call.execute();
-                    if(response.body()){
+                    Response<Integer> response = call.execute();
+                    if(response.body() == 0){
                         isRoom = false;
                         playingToo = false;
                         delete = false;
@@ -442,10 +446,10 @@ public class ServerMusicFragment extends Fragment {
             ArrayList<Object> params = new ArrayList<>();
             params.add(UUIDConnectedRoom);
             params.add(song);
-            Call<Boolean> call = commands.addToTheQueue(params);
+            Call<Integer> call = commands.command(params);
             try{
-                Response<Boolean> response = call.execute();
-                if(!response.body())notMaked.sendEmptyMessage(1);
+                Response<Integer> response = call.execute();
+                if(!(response.body() == 0))notMaked.sendEmptyMessage(1);
             } catch (IOException e) {
                 e.printStackTrace();
                 h.sendEmptyMessage(1);
@@ -473,34 +477,6 @@ public class ServerMusicFragment extends Fragment {
             return null;
         }
     }
-    class CheckingForSongsAndUser extends Thread{
-        @Override
-        public void run() {
-            while(!isInterrupted()){
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                Call<ArrayList<User>> call = commands.getUsers(UUIDConnectedRoom);
-                Call<ArrayList<File>> call1 = commands.getSongs(UUIDConnectedRoom);
-                try{
-                    Response<ArrayList<User>> response = call.execute();
-                    if(response.body() != null){
-                        users = new ArrayList<>(response.body());
-                        all = users.size();
-                    } else notMaked.sendEmptyMessage(1);
-                    Response<ArrayList<File>> response1 = call1.execute();
-                    if(response1.body() != null){
-                        playlist = new ArrayList<>(response1.body());
-                    } else notMaked.sendEmptyMessage(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    h.sendEmptyMessage(1);
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            }
-        }
-    }
     public void changeColor(int text){color = text;}
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -519,5 +495,5 @@ public class ServerMusicFragment extends Fragment {
     public void addToThePlaylist(File f){new AddSong(f).execute();}
     public void setService(MediaPlayerService s){service = s;}
     public void setMe(String s){if(name != null && UUID != null)me = new User(name, UUID, s);}
-    public void UUIDChanged(){text.setText(getResources().getText(R.string.name) + " " + name + "\nUUID: " + UUID);}
+    public void UUIDChanged(){if(text != null) text.setText(getResources().getText(R.string.name) + " " + name + "\nUUID: " + UUID);}
 }
