@@ -1,6 +1,7 @@
 package com.example.rockbee;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,7 +37,11 @@ public class CatalogAdapter extends ArrayAdapter<File> {
         }
         else {
             ((ImageView) convertView.findViewById(R.id.fileOrDirectory)).setImageResource(R.drawable.directory);
-            ((TextView) convertView.findViewById(R.id.nums)).setText(nums + ": " + file.listFiles().length);
+            try{
+                ((TextView) convertView.findViewById(R.id.nums)).setText(nums + ": " + file.listFiles().length);
+            } catch(NullPointerException e){
+                Log.e("CatalogAdapter", e.toString());
+            }
             ((TextView) convertView.findViewById(R.id.nums)).setTextColor(color);
             ((TextView) convertView.findViewById(R.id.fileName)).setText(file.getName());
         }

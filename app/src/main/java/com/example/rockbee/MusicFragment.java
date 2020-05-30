@@ -187,24 +187,24 @@ public class MusicFragment extends Fragment {
                     Toast.makeText(getActivity(), getResources().getString(R.string.cantPlayWithServer), Toast.LENGTH_SHORT).show();
             }
         };
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        if(!smf.isConnected() && !smf.isRoom()) {
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 
-            }
+                }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                progress.changeMode();
-            }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    progress.changeMode();
+                }
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                service.seekTo(seekBar.getProgress());
-                resetTime();
-                progress.changeMode();
-            }
-        });
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    progress.changeMode();
+                }
+            });
+        }
         prev.setOnClickListener(listener);
         next.setOnClickListener(listener);
         ps.setOnClickListener(listener);

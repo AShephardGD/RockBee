@@ -18,26 +18,38 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
 
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import okio.ByteString;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+import static android.os.Environment.getExternalStorageDirectory;
+
 public class ServerMusicFragment extends Fragment {
     private int color;
-    private String name = null, connectedAddress = null, UUID = null, password = null, UUIDConnectedRoom;
-    private boolean isConnected = false, isRoom = false, delete = false, playingToo = false, isName = false, isTracks = true;
-    private ArrayList<File> playlist = new ArrayList<>();
+    private String name = null, UUID = null, password = null, UUIDConnectedRoom, nameForUser = "";
+    private boolean isConnected = false, isRoom = false, delete = false, playingToo = false, isName = false, isTracks = true, canDownload = true;
+    private ArrayList<String> playlist = new ArrayList<>();
     private ArrayList<User> users = new ArrayList<>();
     private MediaPlayerService service;
     private User me;
+    private WebSocket ws;
     private Integer pass = 0, all = 0;
     private Retrofit retrofit = new Retrofit.Builder()
             .baseUrl("http://192.168.1.65:8080")
@@ -47,43 +59,56 @@ public class ServerMusicFragment extends Fragment {
                     .create()))
             .build();
     private CommandToTheServer commands = retrofit.create(CommandToTheServer.class);
-    private Handler h = new Handler(){
-        public void handleMessage(android.os.Message msg){
-            Toast.makeText(getActivity(), R.string.somethingCreateError, Toast.LENGTH_SHORT).show();
-        }}, wrongPassword = new Handler(){
-        public void handleMessage(android.os.Message msg){
-            Toast.makeText(getActivity(), R.string.wrongPassword, Toast.LENGTH_SHORT).show();
-        }}, wrongRoom = new Handler(){
-        public void handleMessage(android.os.Message msg){
-            Toast.makeText(getActivity(), R.string.wrongRoom, Toast.LENGTH_SHORT).show();
-        }}, closedRoom = new Handler(){
-        public void handleMessage(android.os.Message msg){
-            Toast.makeText(getActivity(), R.string.somethingCreateError, Toast.LENGTH_SHORT).show();
-        }}, refresh = new Handler(){
+    private Handler refresh = new Handler(){
         public void handleMessage(android.os.Message msg){
             ((MainActivity) getActivity()).refresh(4);
         }}, notMaked = new Handler(){
         public void handleMessage(android.os.Message msg){
-            Toast.makeText(getActivity(), "Не получилось", Toast.LENGTH_SHORT).show();
-        }}, newPassword = new Handler(){
+            switch(msg.what) {
+                case 0:
+                    Toast.makeText(getActivity(), R.string.somethingCreateError, Toast.LENGTH_SHORT).show();
+                    break;
+                case 1:
+                    try{
+                        Toast.makeText(getActivity(), R.string.wrongRoom, Toast.LENGTH_SHORT).show();
+                        refresh.sendEmptyMessage(1);
+                    } catch (NullPointerException e){}
+                    isRoom = false;
+                    isConnected = false;
+                    UUIDConnectedRoom = null;
+                    password = null;
+                    delete = false;
+                    playingToo = false;
+                    isTracks = true;
+                    playlist = new ArrayList<>();
+                    users = new ArrayList<>();
+                    pass = 0;
+                    all = 0;
+                    break;
+                case 2:
+                    Toast.makeText(getActivity(), R.string.wrongPassword, Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }}, refreshMe = new Handler(){
         public void handleMessage(android.os.Message msg){
-            String p;
-            if(password.equals(""))p = getResources().getString(R.string.noPassword);
-            else p = " \"" +  password + "\"";
-            new AlertDialog.Builder(getActivity())
-                    .setTitle(R.string.info)
-                    .setMessage(getResources().getString(R.string.friendUUID) + UUIDConnectedRoom + "\n" +
-                            getResources().getString(R.string.password) + p + "\n" +
-                            getResources().getString(R.string.against) + pass + "/" + all)
-                    .setPositiveButton(R.string.close, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {}
-                    })
-                    .create()
-                    .show();
-        }
-    };
+            ArrayList<String> list = new ArrayList<>();
+            for (User u: users) list.add(u.toString());
+            myTracks.setAdapter(new UserAdapter(getActivity(), list, color));
+        }}, refreshFriend = new Handler(){
+        public void handleMessage(android.os.Message msg){
+            ArrayList<String> list = new ArrayList<>();
+            for (User u: users) list.add(u.toString());
+            friendsTracks.setAdapter(new UserAdapter(getActivity(), list, color));
+        }}, refreshFriendsTracks = new Handler(){
+        public void handleMessage(android.os.Message msg){
+            friendsTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
+        }}, refreshMyTracks = new Handler(){
+        public void handleMessage(android.os.Message msg){
+            myTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
+        }};
     private TextView text;
+    private Gson gson = new Gson();
+    private ListView myTracks, friendsTracks;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         if(name != null) isName = true;
@@ -112,7 +137,16 @@ public class ServerMusicFragment extends Fragment {
                                         public void onClick(DialogInterface dialog, int which) {
                                             UUIDConnectedRoom = text1.getText().toString();
                                             password = text2.getText().toString();
-                                            new ChosenCommand(1).execute();
+                                            MessageToWebSocket message = new MessageToWebSocket();
+                                            ConnectToTheRoomData data = new ConnectToTheRoomData();
+                                            data.setNameNewUser(me.getName());
+                                            data.setUUIDNewUser(me.getUUID());
+                                            data.setPassword(password);
+                                            message.setData(gson.toJson(data));
+                                            message.setUUID(UUIDConnectedRoom);
+                                            message.setCommand("connect");
+                                            ws.send(gson.toJson(message));
+                                            ((MainActivity)getActivity()).refresh(4);
                                         }
                                     })
                                     .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -134,7 +168,7 @@ public class ServerMusicFragment extends Fragment {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             password = text1.getText().toString();
-                                            new ChosenCommand(0).execute();
+                                            new CreateNewRoom().execute();
                                         }
                                     })
                                     .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -182,14 +216,26 @@ public class ServerMusicFragment extends Fragment {
             change.setOnClickListener(listener);
         } else if(isRoom && isName){//My room created
             view = inflater.inflate(R.layout.servermusicfragment_myroom, container, false);
-            ListView myTracks = view.findViewById(R.id.myTracks);
-            myTracks.setAdapter(new CatalogAdapter(getActivity(), playlist, getResources().getString(R.string.cg), color));
+            myTracks = view.findViewById(R.id.myTracks);
             Switch myDelete = view.findViewById(R.id.myDelete);
             myDelete.setChecked(delete);
-            Button closeTheRoom = view.findViewById(R.id.closeTheRoom), myUserList = view.findViewById(R.id.myUserList), myPassButton = view.findViewById(R.id.myPassButton), myInfo = view.findViewById(R.id.myInfo), setPass = view.findViewById(R.id.setPass);
+            Button closeTheRoom = view.findViewById(R.id.closeTheRoom),
+                    myUserList = view.findViewById(R.id.myUserList),
+                    myPassButton = view.findViewById(R.id.myPassButton),
+                    myInfo = view.findViewById(R.id.myInfo),
+                    setPass = view.findViewById(R.id.setPass);
+            if(isTracks){
+                myUserList.setText(R.string.listUsers);
+                myTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
+            } else {
+                myUserList.setText(R.string.tracks);
+                ArrayList<String> list = new ArrayList<>();
+                for (User u: users) list.add(u.toString());
+                myTracks.setAdapter(new UserAdapter(getActivity(), list, color));
+            }
             myDelete.setChecked(delete);
             myDelete.setTextColor(color);
-            users.add(me);
+            if(!users.contains(me))users.add(me);
             View.OnClickListener listener = new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -198,7 +244,14 @@ public class ServerMusicFragment extends Fragment {
                             delete = myDelete.isChecked();
                             break;
                         case R.id.myPassButton:
-                            new ChosenCommand(4).execute();
+                            if(!service.isPassed()) {
+                                MessageToWebSocket message = new MessageToWebSocket();
+                                message.setCommand("pass");
+                                message.setUUID(UUIDConnectedRoom);
+                                message.setData("");
+                                ws.send(gson.toJson(message));
+                                service.setPassed(true);
+                            }
                             break;
                         case R.id.myUserList:
                             if(isTracks){
@@ -210,11 +263,30 @@ public class ServerMusicFragment extends Fragment {
                             } else {
                                 isTracks = true;
                                 myUserList.setText(R.string.listUsers);
-                                myTracks.setAdapter(new CatalogAdapter(getActivity(), playlist, getResources().getString(R.string.cg), color));
+                                myTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
                             }
                             break;
                         case R.id.closeTheRoom:
-                            new ChosenCommand(3).execute();
+                            service.disconnectToTheServer(UUIDConnectedRoom, true);
+                            MessageToWebSocket message1 = new MessageToWebSocket();
+                            message1.setCommand("close");
+                            message1.setUUID(UUIDConnectedRoom);
+                            message1.setData("");
+                            ws.send(gson.toJson(message1));
+                            isRoom = false;
+                            UUIDConnectedRoom = null;
+                            password = null;
+                            delete = false;
+                            playingToo = false;
+                            isTracks = true;
+                            playlist = new ArrayList<>();
+                            users = new ArrayList<>();
+                            pass = 0;
+                            all = 0;
+                            refresh.sendEmptyMessage(1);
+                            service.setRoom(false);
+                            service.userDisconnected();
+                            deleteSongs();
                             break;
                         case R.id.setPass:
                             View view1 = getLayoutInflater().inflate(R.layout.playlists_alert_dialog, null);
@@ -226,7 +298,11 @@ public class ServerMusicFragment extends Fragment {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             password = text1.getText().toString();
-                                            new ChangePassword(password).execute();
+                                            MessageToWebSocket message2 = new MessageToWebSocket();
+                                            message2.setCommand("password");
+                                            message2.setUUID(UUIDConnectedRoom);
+                                            message2.setData(password);
+                                            ws.send(gson.toJson(message2));
                                         }
                                     })
                                     .setNegativeButton(getResources().getText(R.string.cancel), new DialogInterface.OnClickListener() {
@@ -239,6 +315,7 @@ public class ServerMusicFragment extends Fragment {
                                     .show();
                             break;
                         case R.id.myInfo:
+                            all = users.size();
                             String p;
                             if(password.equals(""))p = getResources().getString(R.string.noPassword);
                             else p = " \""+ password + "\"";
@@ -265,8 +342,8 @@ public class ServerMusicFragment extends Fragment {
             setPass.setOnClickListener(listener);
         } else if (isName){ //Connected to another
             view = inflater.inflate(R.layout.servermusicfragment_friendroom, container, false);
-            ListView friendsTracks = view.findViewById(R.id.friendTracks);
-            friendsTracks.setAdapter(new CatalogAdapter(getActivity(), playlist, getResources().getString(R.string.cg), color));
+            friendsTracks = view.findViewById(R.id.friendTracks);
+            friendsTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
             Button friendPassButton = view.findViewById(R.id.friendPassButton),
                     friendUserList = view.findViewById(R.id.friendUserList),
                     leave = view.findViewById(R.id.leave),
@@ -277,9 +354,19 @@ public class ServerMusicFragment extends Fragment {
             } else {
                 playButton.setText(R.string.stopPlaying);
             }
+            if(!users.contains(me))users.add(me);
             Switch friendDelete = view.findViewById(R.id.friendDelete);
             friendDelete.setChecked(delete);
             friendDelete.setTextColor(color);
+            if(!isTracks){
+                friendUserList.setText(R.string.tracks);
+                ArrayList<String> list = new ArrayList<>();
+                for(User u: users) list.add(u.toString());
+                friendsTracks.setAdapter(new UserAdapter(getActivity(), list, color));
+            } else {
+                friendUserList.setText(R.string.listUsers);
+                friendsTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
+            }
             View.OnClickListener listener = new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -288,13 +375,22 @@ public class ServerMusicFragment extends Fragment {
                             if(playingToo){
                                 playButton.setText(R.string.playToo);
                                 playingToo = false;
+                                service.disconnectToTheServer(UUIDConnectedRoom, true);
                             } else {
                                 playButton.setText(R.string.stopPlaying);
                                 playingToo = true;
+                                service.connectToTheServer(UUID, UUIDConnectedRoom);
                             }
                             break;
                         case R.id.friendPassButton:
-                            new ChosenCommand(4).execute();
+                            if(!service.isPassed()) {
+                                MessageToWebSocket message = new MessageToWebSocket();
+                                message.setCommand("pass");
+                                message.setUUID(UUIDConnectedRoom);
+                                message.setData("");
+                                ws.send(gson.toJson(message));
+                                service.setPassed(true);
+                            }
                             break;
                         case R.id.friendUserList:
                             if(isTracks){
@@ -306,17 +402,53 @@ public class ServerMusicFragment extends Fragment {
                             } else {
                                 isTracks = true;
                                 friendUserList.setText(R.string.listUsers);
-                                friendsTracks.setAdapter(new CatalogAdapter(getActivity(), playlist, getResources().getString(R.string.cg), color));
+                                friendsTracks.setAdapter(new ServerPlaylistAdapter(getActivity(), playlist,  color));
                             }
                             break;
                         case R.id.leave:
-                            new ChosenCommand(2).execute();
+                            MessageToWebSocket message1 = new MessageToWebSocket();
+                            message1.setCommand("disconnect");
+                            message1.setUUID(UUIDConnectedRoom);
+                            ConnectData disconnect = new ConnectData();
+                            disconnect.setNameNewUser(me.getName());
+                            disconnect.setUUIDNewUser(me.getUUID());
+                            message1.setData(gson.toJson(disconnect));
+                            ws.send(gson.toJson(message1));
+                            isConnected = false;
+                            UUIDConnectedRoom = null;
+                            password = null;
+                            delete = false;
+                            playingToo = false;
+                            isTracks = true;
+                            playlist = new ArrayList<>();
+                            users = new ArrayList<>();
+                            pass = 0;
+                            all = 0;
+                            refresh.sendEmptyMessage(1);
+                            service.setConnected(false);
+                            service.userDisconnected();
+                            service.disconnectToTheServer(UUIDConnectedRoom, true);
+                            deleteSongs();
                             break;
                         case R.id.friendDelete:
                             delete = friendDelete.isChecked();
                             break;
                         case R.id.friendInfo:
-                            new ChosenCommand(5).execute();
+                            all = users.size();
+                            String p;
+                            if(password.equals(""))p = getResources().getString(R.string.noPassword);
+                            else p = " \""+ password + "\"";
+                            new AlertDialog.Builder(getActivity())
+                                    .setTitle(R.string.info)
+                                    .setMessage(getResources().getString(R.string.friendUUID) + UUIDConnectedRoom + "\n" +
+                                            getResources().getString(R.string.password) +  p  + "\n" +
+                                            getResources().getString(R.string.against) + pass + "/" + all)
+                                    .setPositiveButton(R.string.close, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {}
+                                    })
+                                    .create()
+                                    .show();
                             break;
                     }
                 }
@@ -330,13 +462,10 @@ public class ServerMusicFragment extends Fragment {
         }
         return view;
     }
-    class ChosenCommand extends AsyncTask{
-        int command;
-        public ChosenCommand(int i) {command = i;}
+    class CreateNewRoom extends AsyncTask{ //Create new room
         @Override
         protected Object doInBackground(Object[] objects){
             ArrayList<Object> params = new ArrayList<>();
-            if(command == 0){//Create new room
                 params.add(me.getName());
                 params.add(me.getUUID());
                 params.add(password);
@@ -345,138 +474,184 @@ public class ServerMusicFragment extends Fragment {
                     Response<Boolean> response = call.execute();
                     if(response.body()){
                         UUIDConnectedRoom = UUID;
-                        service.connected();
                         isRoom = true;
                         refresh.sendEmptyMessage(1);
-                    } else notMaked.sendEmptyMessage(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    h.sendEmptyMessage(1);
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            } else if(command == 1){//Connect to the server
-                params.add(command);
-                params.add(UUIDConnectedRoom);
-                params.add(me.getName());
-                params.add(me.getUUID());
-                params.add(password);
-                Call<Integer> call = commands.command(params);
-                try{
-                    Response<Integer> response = call.execute();
-                    if(response.body() == 0){
-                        isConnected = true;
+                        all++;
+                        MessageToWebSocket message = new MessageToWebSocket();
+                        message.setCommand("creatorsession");
+                        message.setUUID(UUIDConnectedRoom);
+                        message.setData("");
+                        ws.send(gson.toJson(message));
+                        service.connectToTheServer(UUID, UUIDConnectedRoom);
+                        service.setRoom(true);
                         service.connected();
-                        refresh.sendEmptyMessage(1);
-                    }
-                    else if(response.body() == 1) wrongPassword.sendEmptyMessage(1);
-                    else if(response.body() == 2) wrongRoom.sendEmptyMessage(1);
-                    else h.sendEmptyMessage(1);
+                    } else notMaked.sendEmptyMessage(0);
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            } else if(command == 2){//Disconnect
-                params.add(me.getName());
-                params.add(me.getUUID());
-                Call<Integer> call = commands.command(params);
-                try{
-                    Response<Integer> response = call.execute();
-                    if(response.body() == 0){
-                        isConnected = false;
-                        playingToo = false;
-                        delete = false;
-                        UUIDConnectedRoom = null;
-                        refresh.sendEmptyMessage(1);
-                    } else notMaked.sendEmptyMessage(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    h.sendEmptyMessage(1);
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            } else if(command == 3) {//Close the room
-                params.add(command);
-                params.add(UUIDConnectedRoom);
-                Call<Integer> call = commands.command(params);
-                try{
-                    Response<Integer> response = call.execute();
-                    if(response.body() == 0){
-                        isRoom = false;
-                        playingToo = false;
-                        delete = false;
-                        UUIDConnectedRoom = null;
-                        refresh.sendEmptyMessage(1);
-                    } else notMaked.sendEmptyMessage(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    h.sendEmptyMessage(1);
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            } else if(command == 4){ //user pass
-                params.add(UUIDConnectedRoom);
-                params.add(UUID);
-                Call<Boolean> call = commands.userpass(params);
-                try {
-                    Response<Boolean> response = call.execute();
-                    if(!response.body()) notMaked.sendEmptyMessage(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            } else if(command == 5){//get info
-                Call<String> call = commands.getInfo(UUIDConnectedRoom);
-                try{
-                    Response<String> response = call.execute();
-                    if(response.body() != null){
-                        password = response.body();
-                        newPassword.sendEmptyMessage(1);
-                    }
-                    else {
-                        password = "";
-                        newPassword.sendEmptyMessage(1);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    notMaked.sendEmptyMessage(0);
+                } catch (NullPointerException e){notMaked.sendEmptyMessage(0);}
+
+            return null;
+        }
+    }
+    public void gotMessageFromWebSocket(String message){
+        Gson gson = new Gson();
+        MessageFromWebSocket msg = gson.fromJson(message, MessageFromWebSocket.class);
+
+        switch(msg.getCommand()){
+            case "connect":
+                ConnectData data = gson.fromJson(msg.getData(), ConnectData.class);
+                users.add(new User(data.getNameNewUser(), data.getUUIDNewUser(), nameForUser));
+                if(!isTracks && isConnected){
+                    refreshFriend.sendEmptyMessage(1);
+                } else if(!isTracks && isRoom){
+                    refreshMe.sendEmptyMessage(1);
                 }
-            }
-            return null;
+                break;
+            case "disconnect":
+                ConnectData data1 = gson.fromJson(msg.getData(), ConnectData.class);
+                users.remove(new User(data1.getNameNewUser(), data1.getUUIDNewUser(), nameForUser));
+                if(!isTracks && isConnected){
+                    refreshFriend.sendEmptyMessage(1);
+                } else if(!isTracks && isRoom){
+                    refreshMe.sendEmptyMessage(1);
+                }
+                break;
+            case "password":
+                password = msg.getData();
+                break;
+            case "close":
+                isConnected = false;
+                UUIDConnectedRoom = null;
+                password = null;
+                delete = false;
+                playingToo = false;
+                isTracks = true;
+                playlist = new ArrayList<>();
+                users = new ArrayList<>();
+                pass = 0;
+                all = 0;
+                refresh.sendEmptyMessage(1);
+                service.userDisconnected();
+                service.disconnectToTheServer(UUIDConnectedRoom,false);
+                deleteSongs();
+                break;
+            case "pass":
+                pass = Integer.parseInt(msg.getData());
+                break;
+            case "error":
+                notMaked.sendEmptyMessage(Integer.parseInt(msg.getData()));
+                break;
+            case "successconnection":
+                isConnected = true;
+                service.setConnected(true);
+                service.connected();
+                break;
+            case "userslist":
+                User u = gson.fromJson(msg.getData(), User.class);
+                u.setNameString(nameForUser);
+                users.add(u);
+                break;
+            case "songended":
+                if(msg.getData().equals("start"))playlist = new ArrayList<>();
+                else if(msg.getData().equals("end") && isTracks){
+                    service.setPassed(false);
+                    if(myTracks != null && isRoom)refreshMyTracks.sendEmptyMessage(0);
+                    if(friendsTracks != null && isConnected) refreshFriendsTracks.sendEmptyMessage(0);
+                } else if(!msg.getData().equals("end") && !msg.getData().equals("start"))playlist.add(msg.getData());
+                break;
+            case "startedplaying":
+                service.setName(msg.getData());
+                break;
         }
     }
-    class AddSong extends AsyncTask {
+    public void setMe(String s){
+        if(name != null && UUID != null)me = new User(name, UUID, s);
+        nameForUser = s;
+    }
+    class SendAudioToServer extends AsyncTask{
         File song;
-        public AddSong(File song) {
-            this.song = song;
+        Audio a = new Audio();
+        Handler h = new Handler(){
+            public void handleMessage(android.os.Message msg){
+                service.addToThePlaylistFromRoom(song, a);
+            }};
+        public SendAudioToServer(File f) {
+            song = f;
         }
+
         @Override
         protected Object doInBackground(Object[] objects){
-            ArrayList<Object> params = new ArrayList<>();
-            params.add(UUIDConnectedRoom);
-            params.add(song);
-            Call<Integer> call = commands.command(params);
-            try{
-                Response<Integer> response = call.execute();
-                if(!(response.body() == 0))notMaked.sendEmptyMessage(1);
+            canDownload = false;
+            try {
+                byte[] bytes = Files.readAllBytes(song.toPath());
+                String toSend = new String(bytes, StandardCharsets.ISO_8859_1);
+                int len = toSend.length()/500;
+                if(toSend.length() % 500 != 0) len++;
+                ArrayList<Object> params = new ArrayList<>();
+                params.add(UUIDConnectedRoom);
+                params.add(len);
+                params.add(song.getName());
+                Call<Boolean> checkingSong = commands.checkingSongInTheRoom(params);
+                Response<Boolean> response = checkingSong.execute();
+                if(response.body() == null){
+                    notMaked.sendEmptyMessage(0);
+                    return null;
+                }
+                else if(!response.body()) {
+                    AudioData data;
+                    MessageToWebSocket message;
+                    for (int i = 0; i < len; i++) {
+                        data = new AudioData();
+                        data.setName(song.getName());
+                        data.setLenAudio(Integer.toString(len));
+                        if (((i + 1) * 500) < toSend.length())
+                            data.setAudio(toSend.substring(i * 500, (i + 1) * 500));
+                        else data.setAudio(toSend.substring(i * 500));
+                        data.setPart(Integer.toString(i));
+                        data.setBy(UUID);
+                        message = new MessageToWebSocket();
+                        message.setCommand("audio");
+                        message.setUUID(UUIDConnectedRoom);
+                        message.setData(new Gson().toJson(data));
+                        ws.send(new Gson().toJson(message));
+                    }
+                } else{
+                    MessageToWebSocket message = new MessageToWebSocket();
+                    message.setCommand("addfromuser");
+                    message.setUUID(UUIDConnectedRoom);
+                    message.setData(song.getName());
+                    ws.send(gson.toJson(message));
+                }
+                a.setLen(len);
+                a.setName(song.getName());
+                if(isRoom)h.sendEmptyMessage(0);
             } catch (IOException e) {
                 e.printStackTrace();
-                h.sendEmptyMessage(1);
-            } catch (NullPointerException e){h.sendEmptyMessage(1);}
+            }
+            canDownload = true;
             return null;
         }
     }
-    class ChangePassword extends AsyncTask {
-        String newPassword;
-        public ChangePassword(String s){newPassword = s;}
-        @Override
-        protected Object doInBackground(Object[] objects){
-            ArrayList<Object> params = new ArrayList<>();
-            params.add(UUIDConnectedRoom);
-            params.add(newPassword);
-            Call<Boolean> call = commands.changePassword(params);
-            try{
-                Response<Boolean> response = call.execute();
-                if(response.body())password = newPassword;
-                else notMaked.sendEmptyMessage(1);
-            } catch (IOException e) {
-                e.printStackTrace();
-                h.sendEmptyMessage(1);
-            } catch (NullPointerException e){h.sendEmptyMessage(1);}
-            return null;
+    public void addToThePlaylist(File f){
+        if(canDownload) {
+            new SendAudioToServer(f).execute();
+            Toast.makeText(getActivity(), R.string.downloading, Toast.LENGTH_SHORT).show();
+        } else Toast.makeText(getActivity(), R.string.cantdownload, Toast.LENGTH_SHORT).show();
+    }
+    public void deleteSongs(){
+        Log.i("delete", "delete");
+        if(delete){
+            Log.i("delete", "delete");
+            File catalog = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee");
+            for(File f: Objects.requireNonNull(catalog.listFiles())){
+                f.delete();
+                Log.i("delete", "delete");
+            }
         }
     }
+    public void setService(MediaPlayerService s){service = s;}
+    public void setWebSocket(WebSocket webSocket){ws = webSocket;}
     public void changeColor(int text){color = text;}
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -484,16 +659,17 @@ public class ServerMusicFragment extends Fragment {
     public void setConnected(boolean connected) { isConnected = connected; }
     public boolean isRoom() { return isRoom; }
     public void setRoom(boolean room) { isRoom = room; }
-    public String getConnectedAddress() { return connectedAddress; }
-    public void setConnectedAddress(String connectedAddress) { this.connectedAddress = connectedAddress; }
+    public String getConnectedAddress() { return UUIDConnectedRoom; }
+    public void setConnectedAddress(String connectedAddress) { UUIDConnectedRoom = connectedAddress; }
     public boolean isDelete() { return delete; }
     public void setDelete(boolean delete) { this.delete = delete; }
     public boolean isPlayingToo() {return playingToo;}
     public void setPlayingToo(boolean playingToo) { this.playingToo = playingToo; }
     public String getUUID() {return UUID;}
     public void setUUID(String UUID) { this.UUID = UUID; }
-    public void addToThePlaylist(File f){new AddSong(f).execute();}
-    public void setService(MediaPlayerService s){service = s;}
-    public void setMe(String s){if(name != null && UUID != null)me = new User(name, UUID, s);}
     public void UUIDChanged(){if(text != null) text.setText(getResources().getText(R.string.name) + " " + name + "\nUUID: " + UUID);}
+
+    public ArrayList<String> getPlaylist() {
+        return playlist;
+    }
 }

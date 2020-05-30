@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -27,6 +28,10 @@ import androidx.fragment.app.FragmentManager;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
+import com.google.gson.Gson;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +39,11 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import okio.ByteString;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -79,7 +89,8 @@ public class MainActivity extends FragmentActivity {
             Toast.makeText(MainActivity.this, "here", Toast.LENGTH_SHORT).show();
         }
     };
-
+    private OkHttpClient client;
+    private WebSocket ws;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         startService(new Intent(this, MediaPlayerService.class));
@@ -96,7 +107,7 @@ public class MainActivity extends FragmentActivity {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 MainActivity.this.service = ((MediaPlayerService.MyBinder) service).getService();
-                MainActivity.this.service.setFragments(mf);
+                MainActivity.this.service.setFragments(mf, smf);
                 cf.setService(MainActivity.this.service);
                 mf.setService(MainActivity.this.service);
                 pf.setService(MainActivity.this.service);
@@ -118,12 +129,25 @@ public class MainActivity extends FragmentActivity {
                 mf.setThread(progress);
                 mf.setCatalogFragment(cf);
                 mf.setServerMusicFragment(smf);
+                mf.setIsPlaying(MainActivity.this.service.getNowPlaying());
                 cf.setPlaylistFragment(pf);
                 cf.setMusicFragment(mf);
                 cf.setServerMusicFragment(smf);
                 pf.setCatalogFragment(cf);
                 pf.setMusicFragment(mf);
                 pf.setServerMusicFragment(smf);
+                client = new OkHttpClient();
+                Request request = new Request.Builder().url("ws:192.168.1.65:8080/handler").build();
+                EchoWebSocketListener listener = new EchoWebSocketListener();
+                ws = client.newWebSocket(request, listener);
+                smf.setWebSocket(ws);
+                if(smf.isConnected() || smf.isRoom()) {
+                    MessageToWebSocket message = new MessageToWebSocket();
+                    message.setCommand("oncreate");
+                    message.setUUID(smf.getConnectedAddress());
+                    message.setData("");
+                    ws.send(new Gson().toJson(message));
+                }
                 viewPager.setCurrentItem(1);
                 viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
                     @Override
@@ -170,7 +194,6 @@ public class MainActivity extends FragmentActivity {
                     @Override
                     public void onPageScrollStateChanged(int state) { }
                 });
-                mf.setIsPlaying(MainActivity.this.service.getNowPlaying());
             }
             @Override
             public void onServiceDisconnected(ComponentName name) {
@@ -260,7 +283,8 @@ public class MainActivity extends FragmentActivity {
         else if(color == 18) changeColor(getResources().getColor(R.color.pink), getResources().getColor(R.color.olive));
         len = sPref.getInt("lenLastPlaylist", 0);
         for(int it = 0; it < len; it++){
-            lastPlaylist.add(new File(sPref.getString("lastPlaylist" + it, "")));
+            File f = new File(sPref.getString("lastPlaylist" + it, ""));
+            if(f.exists())lastPlaylist.add(f);
         }
         service.setIsLooping(isLooping);
         service.setRandom(isRandom);
@@ -277,6 +301,14 @@ public class MainActivity extends FragmentActivity {
     @Override
     protected void onDestroy() {
         unbindService(sConn);
+        if(smf.isConnected() || smf.isRoom()) {
+            MessageToWebSocket message = new MessageToWebSocket();
+            message.setCommand("ondestroy");
+            message.setUUID(smf.getUUID());
+            message.setData("");
+            ws.send(new Gson().toJson(message));
+        }
+        client.dispatcher().executorService().shutdown();
         super.onDestroy();
         save();
         progress.interrupt();
@@ -369,6 +401,22 @@ public class MainActivity extends FragmentActivity {
                 }
             } catch (IOException e) {e.printStackTrace();}
             return null;
+        }
+    }
+    private class EchoWebSocketListener extends WebSocketListener {
+        private Handler refresh = new Handler(){
+            public void handleMessage(android.os.Message msg){
+                Toast.makeText(MainActivity.this, R.string.somethingCreateError, Toast.LENGTH_SHORT).show();
+            }};
+        @Override
+        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+            smf.gotMessageFromWebSocket(text);
+        }
+
+        @Override
+        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable okhttp3.Response response) {
+            refresh.sendEmptyMessage(1);
+            Log.e("WebSocket", t.toString());
         }
     }
     public void setNewPlaylistName(String s){pf.createNewPlaylist(s);}

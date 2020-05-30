@@ -1,5 +1,7 @@
 package com.example.rockbee;
 
+import androidx.annotation.Nullable;
+
 public class User {
     String name, UUID, nameString;
 
@@ -29,5 +31,17 @@ public class User {
     public String toString() {
         return  nameString  + " " + name + '\n' +
                 "UUID: " + UUID;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if(obj == null) return false;
+        if(getClass() != obj.getClass()) return false;
+        User u = (User) obj;
+        return u.getName().equals(this.name) && u.getUUID().equals(this.UUID);
+    }
+
+    public void setNameString(String nameString) {
+        this.nameString = nameString;
     }
 }

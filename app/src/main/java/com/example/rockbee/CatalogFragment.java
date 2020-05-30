@@ -43,6 +43,7 @@ public class CatalogFragment extends Fragment {
         }
     }, catalogIsReady = new Handler(){
         public void handleMessage(android.os.Message msg){
+            if(!parentDirectory.equals(root)) back.show();
             CatalogAdapter adapter = new CatalogAdapter(getActivity(), files, "" + getResources().getText(R.string.cg), color);
             cg.setAdapter(adapter);
             cg.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -97,7 +98,8 @@ public class CatalogFragment extends Fragment {
                                                             public void onClick(DialogInterface dialog, int which) {
                                                                 if (files.get(position).delete()) {
                                                                     files.remove(position);
-                                                                    new Open(parentDirectory).start();
+                                                                    if(files.isEmpty()) onBackPressed();
+                                                                    else new Open(parentDirectory).start();
                                                                 } else
                                                                     Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
                                                             }
@@ -131,7 +133,8 @@ public class CatalogFragment extends Fragment {
                                                             public void onClick(DialogInterface dialog, int which) {
                                                                 if (files.get(position).delete()) {
                                                                     files.remove(position);
-                                                                    new Open(parentDirectory).start();
+                                                                    if(files.isEmpty()) onBackPressed();
+                                                                    else new Open(parentDirectory).start();
                                                                 } else
                                                                     Toast.makeText(getActivity(), getResources().getText(R.string.cantDelete), Toast.LENGTH_SHORT).show();
                                                             }

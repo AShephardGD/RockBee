@@ -101,4 +101,7 @@
     <string name="wrongRoom">Комната не найдена</string>
     <string name="closedRoom">Комната закрыта</string>
     <string name="noPassword">Нет пароля</string>
+    <string name="noSong">Ничего не воспроизводится</string>
+    <string name="downloading">Загружаю</string>
+    <string name="cantdownload">Предыдущий трек загружается, пожалуйста подождите</string>
 </resources>
