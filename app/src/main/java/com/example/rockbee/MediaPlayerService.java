@@ -45,6 +45,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -62,10 +63,9 @@ public class MediaPlayerService extends Service {
     private final int NOTIFICATION_ID = 1;
     private final String NOTIFICATION_DEFAULT_CHANNEL_ID = "default_channel";
     private MediaPlayer mediaPlayer = new MediaPlayer();
-    private ArrayList<File> playlist = new ArrayList<>();
+    private ArrayList<File> playlist = new ArrayList<>(), usedSongsWithServer = new ArrayList<>();
     private boolean isRandom = false, wasPlaying = true, isConnected = false, isRoom = false, isPassed;
     private int isLooping = 0;
-    private long nowPlayingTime = 0;
     private File nowPlaying = null;
     private MusicFragment mf;
     private boolean audioFocus = false;
@@ -76,7 +76,6 @@ public class MediaPlayerService extends Service {
     private WebSocket ws;
     private Gson gson = new Gson();
     private ArrayList<Audio> music = new ArrayList<>();
-    private HashMap<File, Audio> stackMusic = new HashMap<>();
     final PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
             .setActions(PlaybackStateCompat.ACTION_PLAY
                     | PlaybackStateCompat.ACTION_STOP
@@ -104,23 +103,18 @@ public class MediaPlayerService extends Service {
             mediaSession.setActive(true);
             registerReceiver(becomingNoisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
             mediaPlayer.start();
+            if(isRoom){
+                MessageToWebSocket message = new MessageToWebSocket();
+                message.setCommand("startplaying");
+                message.setUUID(UUIDConnectedRoom);
+                message.setData(nowPlaying.getName());
+                ws.send(gson.toJson(message));
+            }
             if(isConnected){
                 MessageToWebSocket message = new MessageToWebSocket();
                 message.setCommand("checkfortime");
                 message.setUUID(UUIDConnectedRoom);
                 message.setData("");
-                ws.send(gson.toJson(message));
-            }
-            if(isRoom){
-                MessageToWebSocket message = new MessageToWebSocket();
-                message.setCommand("startplaying");
-                message.setUUID(UUIDConnectedRoom);
-                AudioData data = new AudioData();
-                Audio a = stackMusic.get(nowPlaying);
-                data.setName(a.getName());
-                data.setLenAudio(Integer.toString(a.getLen()));
-                data.setPart(Long.toString(System.currentTimeMillis() - mediaPlayer.getCurrentPosition()));
-                message.setData(gson.toJson(data));
                 ws.send(gson.toJson(message));
             }
             mediaPlayer.setVolume(1.0f, 1.0f);
@@ -136,11 +130,6 @@ public class MediaPlayerService extends Service {
                         else mf.setPlay();
                     } else if(isRoom){
                         playlist.remove(0);
-                        MessageToWebSocket message = new MessageToWebSocket();
-                        message.setCommand("songended");
-                        message.setUUID(UUIDConnectedRoom);
-                        message.setData("");
-                        ws.send(gson.toJson(message));
                         if(!playlist.isEmpty()){
                             playMusicFromRoom(playlist.get(0));
                         } else{
@@ -155,23 +144,13 @@ public class MediaPlayerService extends Service {
                             refresh(currentState);
                             mf.setPlay();
                             mf.setIsPlaying(null);
+                            MessageToWebSocket message = new MessageToWebSocket();
+                            message.setCommand("songended");
+                            message.setUUID(UUIDConnectedRoom);
+                            message.setData("");
+                            ws.send(gson.toJson(message));
                         }
-                    } /*else if(isConnected){
-                        playlist.remove(0);
-                        if(playlist.isEmpty()){
-                            mediaPlayer.release();
-                            mediaPlayer = new MediaPlayer();
-                            wasPlaying = false;
-                            audioFocus = false;
-                            nowPlaying = null;
-                            nameOfSong = null;
-                            mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
-                            currentState = PlaybackStateCompat.STATE_PAUSED;
-                            refresh(currentState);
-                            mf.setPlay();
-                            mf.setIsPlaying(null);
-                        }
-                    }*/
+                    }
                 }
             });
             mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
@@ -454,6 +433,8 @@ public class MediaPlayerService extends Service {
     }
     public void connected(){
         mediaSession.setActive(true);
+        File[] songs = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee").listFiles();
+        usedSongsWithServer.addAll(Arrays.asList(Objects.requireNonNull(songs)));
         MediaControllerCompat controller;
         try {
             controller = new MediaControllerCompat(this, mediaSession.getSessionToken());
@@ -499,34 +480,19 @@ public class MediaPlayerService extends Service {
                         byte[] bytes = input.toString().getBytes(StandardCharsets.ISO_8859_1);
                         try{
                             File song = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee/" + audio.getName());
-                            if(song.exists() && song.canWrite()) {
-                                FileOutputStream fos = new FileOutputStream(song);
+                            if(!song.exists()) song.createNewFile();
+                            if(song.canWrite()) {
+                                FileOutputStream fos = new FileOutputStream(song, false);
                                 fos.write(bytes);
                                 fos.close();
                                 Audio a = new Audio();
                                 a.setName(audio.getName());
                                 a.setLen(audio.getLen());
                                 music.remove(audio);
-                                if(isConnected) {
-                                    playlist.add(smf.getPlaylist().indexOf((song.getName())), song);
-                                    if (playlist.get(0) != null) playMusicFromRoom(playlist.get(0));
-                                }
-                                if(isRoom)addToThePlaylistFromRoom(song, a);
-                            }else if(!song.exists()){
-                                song.createNewFile();
-                                FileOutputStream fos = new FileOutputStream(song);
-                                fos.write(bytes);
-                                fos.close();
-                                Audio a = new Audio();
-                                a.setName(audio.getName());
-                                a.setLen(audio.getLen());
-                                music.remove(audio);
-                                if(isConnected) {
-                                    playlist.add(smf.getPlaylist().indexOf((song.getName())), song);
-                                    if (playlist.get(0) != null) playMusicFromRoom(playlist.get(0));
-                                }
-                                if(isRoom)addToThePlaylistFromRoom(song, a);
-                            } else  {
+                                usedSongsWithServer.add(song);
+                                if(isRoom)addToThePlaylistFromRoom(song);
+                                else if(isConnected &&nameOfSong.equals(song.getName())){playMusicFromRoom(song);}
+                            }else  {
                                 refresh.sendEmptyMessage(1);
                             }
                         } catch (IOException e) {
@@ -536,26 +502,20 @@ public class MediaPlayerService extends Service {
                     break;
                 case "check":
                     AudioData data1 = gson.fromJson(message.getData(), AudioData.class);
-                    File catalog = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee");
                     MessageToWebSocket toSend = new MessageToWebSocket();
                     toSend.setCommand("checked");
                     toSend.setUUID(UUIDConnectedRoom);
-                    Boolean is = false;
-                    File findSong = null;
-                    if(catalog.listFiles() != null) for(File f: Objects.requireNonNull(catalog.listFiles()))if(f.getName().equals(data1.getName()) && f.length() != 0) {
+                    File song1 = null;
+                    boolean is = false;
+                    for(File f: usedSongsWithServer) if(f.getName().equals(data1.getName()) && f.length() == Integer.parseInt(data1.getLenAudio())) {
                         is = true;
-                        findSong =f;
+                        song1 = f;
                     }
-                    for(File f: stackMusic.keySet())if(f.getName().equals(data1.getName()) && f.length() != 0) {
-                        is = true;
-                        findSong = f;
-                    }
+                    if(is && isRoom && song1 != null) addToThePlaylistFromRoom(song1);
+                    if(is && isConnected && song1 != null && song1.getName().equals(nameOfSong))playMusicFromRoom(song1);
                     data1.setAudio(Boolean.toString(is));
                     toSend.setData(gson.toJson(data1));
                     webSocket.send(gson.toJson(toSend));
-                    if(findSong != null && isRoom) {
-                        addToThePlaylistFromRoom(findSong, stackMusic.get(findSong));
-                    }
                     break;
                 case "createnewfile":
                     File song = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee/" + message.getData());
@@ -568,7 +528,6 @@ public class MediaPlayerService extends Service {
                     }
                     break;
                 case "songendedfromusers":
-                    Log.i("songended", "end");
                     playlist.remove(0);
                     if(!playlist.isEmpty()){
                         nowPlaying = playlist.get(0);
@@ -587,12 +546,21 @@ public class MediaPlayerService extends Service {
                     }
                     break;
                 case "startedplaying":
-                    AudioData data2 = gson.fromJson(message.getData(), AudioData.class);
-                    nameOfSong = data2.getName();
-                    nowPlayingTime = Long.parseLong(data2.getPart());
-                    File songToPlay = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee/" + nameOfSong);
-                    if(songToPlay.canRead() && songToPlay.exists() && songToPlay.length() != 0) {
-                        playMusicFromRoom(songToPlay);
+                    nameOfSong = message.getData();
+                    File songToPlay = null;
+                    for(File f: usedSongsWithServer) {
+                        if(f.getName().equals(message.getData())) songToPlay = f;
+                    }
+                    if(Objects.requireNonNull(songToPlay).exists() && songToPlay.length() != 0) {playMusicFromRoom(songToPlay); }
+                    else{
+                        AudioData data2 = new AudioData();
+                        data2.setName(nameOfSong);
+                        data2.setAudio(String.valueOf(false));
+                        MessageToWebSocket message1 = new MessageToWebSocket();
+                        message1.setCommand("checked");
+                        message1.setUUID(UUIDConnectedRoom);
+                        message1.setData(gson.toJson(data2));
+                        ws.send(gson.toJson(message1));
                     }
                     break;
                 case "needtime":
@@ -603,15 +571,29 @@ public class MediaPlayerService extends Service {
                     ws.send(gson.toJson(message1));
                     break;
                 case "catchtime":
-                    if(isConnected)seekTo(Integer.parseInt(message.getData()));
+                    seekTo(Integer.parseInt(message.getData()));
                     break;
-                /*case "addfromuser":
-                    nameOfSong = message.getData();
-                    File songToPlayfromuser = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee/" + nameOfSong);
-                    if(songToPlayfromuser.canRead() && songToPlayfromuser.exists() && songToPlayfromuser.length() != 0) {
-                        addToThePlaylistFromRoom(songToPlayfromuser, stackMusic.get(songToPlayfromuser));
+                case "allmusicended":
+                    mediaPlayer.release();
+                    mediaPlayer = new MediaPlayer();
+                    wasPlaying = false;
+                    audioFocus = false;
+                    nowPlaying = null;
+                    mediaSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1).build());
+                    currentState = PlaybackStateCompat.STATE_PAUSED;
+                    refresh(currentState);
+                    mf.setPlay();
+                    mf.setIsPlaying(null);
+                    break;
+                case "addfromnotcreator":
+                    String name = message.getData();
+                    for(File f: usedSongsWithServer){
+                        if(f.getName().equals(name)){
+                            addToThePlaylistFromRoom(f);
+                            return;
+                        }
                     }
-                    break;*/
+                    break;
             }
         }
 
@@ -639,26 +621,20 @@ public class MediaPlayerService extends Service {
         }
         pause();
     }
-    public void addToThePlaylistFromRoom(File f, Audio a){
-        stackMusic.put(f, a);
+    public void addToThePlaylistFromRoom(File f){
         playlist.add(f);
-        if(isRoom) {
-            MessageToWebSocket message = new MessageToWebSocket();
-            message.setCommand("addtotheplaylist");
-            message.setUUID(UUIDConnectedRoom);
-            AudioData data = new AudioData();
-            data.setName(a.getName());
-            data.setLenAudio(Integer.toString(a.getLen()));
-            data.setAudio("");
-            data.setBy("");
-            data.setPart("");
-            message.setData(gson.toJson(data));
-            ws.send(gson.toJson(message));
-        }
+        usedSongsWithServer.add(f);
         if(nowPlaying == null) playMusicFromRoom(f);
+        MessageToWebSocket message = new MessageToWebSocket();
+        message.setCommand("newplaylist");
+        message.setUUID(UUIDConnectedRoom);
+        AudioData data = new AudioData();
+        data.setName(f.getName());
+        data.setAudio("add");
+        message.setData(gson.toJson(data));
+        ws.send(gson.toJson(message));
     }
     public void playMusicFromRoom(File f){
-        Log.i("startedplaying", "playing song" + f.getName());
         mediaPlayer.release();
         mediaPlayer = new MediaPlayer();
         try {
@@ -684,8 +660,8 @@ public class MediaPlayerService extends Service {
     }
     public void userDisconnected(){
         playlist = new ArrayList<>();
-        stackMusic = new HashMap<>();
         nowPlaying = null;
+        usedSongsWithServer = new ArrayList<>();
     }
     public void setRandom(boolean r) {isRandom = r;}
     public void setIsLooping(int i){isLooping = i;}
@@ -702,4 +678,13 @@ public class MediaPlayerService extends Service {
         nameOfSong = name;
         refresh(currentState);
     }
+    public void deleteSongs(){
+        if(smf.isDelete() && false){
+            File catalog = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee");
+            for(File f: Objects.requireNonNull(catalog.listFiles())){
+                if(usedSongsWithServer.contains(f))f.delete();
+            }
+        }
+    }
+    public void addSongToServer(File f){usedSongsWithServer.add(f);}
 }

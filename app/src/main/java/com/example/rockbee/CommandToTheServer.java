@@ -15,4 +15,6 @@ public interface CommandToTheServer {
     Call<Boolean> createNewRoom(@Body ArrayList<Object> params);//User creator, String pass
     @POST("/checkingsong")
     Call<Boolean> checkingSongInTheRoom(@Body ArrayList<Object> params);
+    @POST("/checkingroom")
+    Call<Boolean> checkingRoom(@Body ArrayList<Object> params);
 }

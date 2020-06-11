@@ -113,6 +113,7 @@ public class ServerMusicFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         if(name != null) isName = true;
         View view = null;
+        if(isConnected || isRoom)new isRoomAlive().execute();
         if (!isRoom && !isConnected && isName){ //Started menu
             view = inflater.inflate(R.layout.servermusicfragment_noroom, container, false);
             text = view.findViewById(R.id.nameAndUUID);
@@ -286,7 +287,7 @@ public class ServerMusicFragment extends Fragment {
                             refresh.sendEmptyMessage(1);
                             service.setRoom(false);
                             service.userDisconnected();
-                            deleteSongs();
+                            service.deleteSongs();
                             break;
                         case R.id.setPass:
                             View view1 = getLayoutInflater().inflate(R.layout.playlists_alert_dialog, null);
@@ -428,7 +429,7 @@ public class ServerMusicFragment extends Fragment {
                             service.setConnected(false);
                             service.userDisconnected();
                             service.disconnectToTheServer(UUIDConnectedRoom, true);
-                            deleteSongs();
+                            service.deleteSongs();
                             break;
                         case R.id.friendDelete:
                             delete = friendDelete.isChecked();
@@ -534,7 +535,7 @@ public class ServerMusicFragment extends Fragment {
                 refresh.sendEmptyMessage(1);
                 service.userDisconnected();
                 service.disconnectToTheServer(UUIDConnectedRoom,false);
-                deleteSongs();
+                service.deleteSongs();
                 break;
             case "pass":
                 pass = Integer.parseInt(msg.getData());
@@ -563,6 +564,23 @@ public class ServerMusicFragment extends Fragment {
             case "startedplaying":
                 service.setName(msg.getData());
                 break;
+            case "addtotheplaylist":
+                playlist.add(msg.getData());
+                if(myTracks != null && isRoom)refreshMyTracks.sendEmptyMessage(0);
+                if(friendsTracks != null && isConnected) refreshFriendsTracks.sendEmptyMessage(0);
+                break;
+            case "deletefromtheplaylist":
+                playlist.remove(msg.getData());
+                if(myTracks != null && isRoom)refreshMyTracks.sendEmptyMessage(0);
+                if(friendsTracks != null && isConnected) refreshFriendsTracks.sendEmptyMessage(0);
+                service.setPassed(false);
+                break;
+            case "allmusicended":
+                playlist = new ArrayList<>();
+                if(myTracks != null && isRoom)refreshMyTracks.sendEmptyMessage(0);
+                if(friendsTracks != null && isConnected) refreshFriendsTracks.sendEmptyMessage(0);
+                service.setPassed(false);
+                break;
         }
     }
     public void setMe(String s){
@@ -571,10 +589,9 @@ public class ServerMusicFragment extends Fragment {
     }
     class SendAudioToServer extends AsyncTask{
         File song;
-        Audio a = new Audio();
         Handler h = new Handler(){
             public void handleMessage(android.os.Message msg){
-                service.addToThePlaylistFromRoom(song, a);
+                service.addToThePlaylistFromRoom(song);
             }};
         public SendAudioToServer(File f) {
             song = f;
@@ -586,45 +603,43 @@ public class ServerMusicFragment extends Fragment {
             try {
                 byte[] bytes = Files.readAllBytes(song.toPath());
                 String toSend = new String(bytes, StandardCharsets.ISO_8859_1);
-                int len = toSend.length()/500;
-                if(toSend.length() % 500 != 0) len++;
+                int len = toSend.length()/256;
+                if(toSend.length() % 256 != 0) len++;
                 ArrayList<Object> params = new ArrayList<>();
                 params.add(UUIDConnectedRoom);
-                params.add(len);
+                params.add(song.length());
                 params.add(song.getName());
-                Call<Boolean> checkingSong = commands.checkingSongInTheRoom(params);
+                Call<Boolean> checkingSong = commands.checkingSongInTheRoom(params);//Проверка: Есть ли песня на сервере
                 Response<Boolean> response = checkingSong.execute();
                 if(response.body() == null){
                     notMaked.sendEmptyMessage(0);
                     return null;
                 }
-                else if(!response.body()) {
-                    AudioData data;
-                    MessageToWebSocket message;
+                else if(!response.body()) {//Песни нет на сервере
+                    AudioData data = new AudioData();
+                    data.setName(song.getName());
+                    data.setLenAudio(Integer.toString(len));
+                    data.setBy(UUID);
+                    MessageToWebSocket message = new MessageToWebSocket();
+                    message.setCommand("audio");
+                    message.setUUID(UUIDConnectedRoom);
                     for (int i = 0; i < len; i++) {
-                        data = new AudioData();
-                        data.setName(song.getName());
-                        data.setLenAudio(Integer.toString(len));
-                        if (((i + 1) * 500) < toSend.length())
-                            data.setAudio(toSend.substring(i * 500, (i + 1) * 500));
-                        else data.setAudio(toSend.substring(i * 500));
+                        if (((i + 1) * 256) < toSend.length())
+                            data.setAudio(toSend.substring(i * 256, (i + 1) * 256));
+                        else data.setAudio(toSend.substring(i * 256));
                         data.setPart(Integer.toString(i));
-                        data.setBy(UUID);
-                        message = new MessageToWebSocket();
-                        message.setCommand("audio");
-                        message.setUUID(UUIDConnectedRoom);
                         message.setData(new Gson().toJson(data));
                         ws.send(new Gson().toJson(message));
                     }
-                } else{
+                    service.addSongToServer(song);
+                } //Песня докачалась
+                else if(isConnected){
                     MessageToWebSocket message = new MessageToWebSocket();
-                    message.setCommand("addfromuser");
+                    message.setCommand("addfromnotcreator");
                     message.setUUID(UUIDConnectedRoom);
                     message.setData(song.getName());
                     ws.send(gson.toJson(message));
                 }
-                a.setLen(len);
-                a.setName(song.getName());
                 if(isRoom)h.sendEmptyMessage(0);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -633,22 +648,31 @@ public class ServerMusicFragment extends Fragment {
             return null;
         }
     }
+    class isRoomAlive extends AsyncTask{
+
+        @Override
+        protected Object doInBackground(Object[] objects){
+            ArrayList<Object> params = new ArrayList<>();
+            params.add(UUIDConnectedRoom);
+            Call<Boolean> call = commands.checkingRoom(params);
+            Log.i("IsRoomAlive", "checking");
+            try {
+                Response<Boolean> response = call.execute();
+                if(!response.body()){
+                    notMaked.sendEmptyMessage(1);
+                    Log.i("IsRoomAlive", "thereisnoroom");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e){}
+            return null;
+        }
+    }
     public void addToThePlaylist(File f){
         if(canDownload) {
             new SendAudioToServer(f).execute();
             Toast.makeText(getActivity(), R.string.downloading, Toast.LENGTH_SHORT).show();
         } else Toast.makeText(getActivity(), R.string.cantdownload, Toast.LENGTH_SHORT).show();
-    }
-    public void deleteSongs(){
-        Log.i("delete", "delete");
-        if(delete){
-            Log.i("delete", "delete");
-            File catalog = new File(getExternalStorageDirectory().getAbsolutePath() + "/Temporary Music From RockBee");
-            for(File f: Objects.requireNonNull(catalog.listFiles())){
-                f.delete();
-                Log.i("delete", "delete");
-            }
-        }
     }
     public void setService(MediaPlayerService s){service = s;}
     public void setWebSocket(WebSocket webSocket){ws = webSocket;}
@@ -668,8 +692,4 @@ public class ServerMusicFragment extends Fragment {
     public String getUUID() {return UUID;}
     public void setUUID(String UUID) { this.UUID = UUID; }
     public void UUIDChanged(){if(text != null) text.setText(getResources().getText(R.string.name) + " " + name + "\nUUID: " + UUID);}
-
-    public ArrayList<String> getPlaylist() {
-        return playlist;
-    }
 }
